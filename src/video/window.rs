@@ -1,13 +1,18 @@
 use glfw::{Context, Glfw, PWindow, GlfwReceiver, WindowEvent};
 
+use crate::video::sprite::{Sprite, SpriteId};
+
 use std::time::{Instant, Duration};
 use std::thread::yield_now;
+use std::collections::HashMap;
 
 pub struct WindowManager {
     window: PWindow,
     target_fps: f64,
     last_frame: Instant,
     show_fps: bool,
+    sprites: HashMap<SpriteId, Sprite>,
+    last_sprite_id: u64,
 }
 
 impl WindowManager {
@@ -17,11 +22,49 @@ impl WindowManager {
             target_fps: 60.0,
             last_frame: Instant::now(),
             show_fps: false,
+            sprites: HashMap::new(),
+            last_sprite_id: 0
         }
     }
 
-    pub fn show_fps(&mut self, a: bool) {
-        self.show_fps = a;
+    pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
+        self.sprites.get_mut(&id)
+    }
+
+    pub fn get_sprites_ids(&self) -> &HashMap<SpriteId, Sprite> {
+        &self.sprites
+    }
+
+    pub fn add_sprite(&mut self, mut sprite: Sprite) -> SpriteId {
+        sprite.set_id(self.last_sprite_id);
+        self.last_sprite_id += 1;
+        let sprite_id = sprite.get_id();
+        self.sprites.insert(sprite_id.clone(), sprite);
+        sprite_id
+    }
+
+    pub fn remove_sprite(&mut self, sprite_id: &SpriteId) {
+        self.sprites.remove(sprite_id);
+    }
+
+    pub fn toggle_fullscreen(&mut self) {
+        if !self.window.is_maximized() {
+            self.window.maximize();
+        }
+        else {
+            self.window.restore();
+        }
+    }
+
+    pub fn set_window_size(&mut self, width: i32, height: i32) {
+        self.window.set_size(width, height);
+    }
+
+    pub fn toggle_show_fps(&mut self) {
+        match self.show_fps {
+            true => self.show_fps = false,
+            false => self.show_fps = true,
+        }
     }
 
     pub fn set_fps(&mut self, fps: f64) {
@@ -45,6 +88,10 @@ impl WindowManager {
         self.window.swap_buffers();
     }
 
+    pub fn draw_frame(&mut self) {
+        // run through self.sprites and draw them
+        self.swap_buffers();
+    }
     pub fn is_running(&self) -> bool {
         return !self.window.should_close();
     }
