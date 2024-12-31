@@ -7,6 +7,7 @@ pub struct WindowManager {
     window: PWindow,
     target_fps: f64,
     last_frame: Instant,
+    show_fps: bool,
 }
 
 impl WindowManager {
@@ -15,7 +16,12 @@ impl WindowManager {
             window,
             target_fps: 60.0,
             last_frame: Instant::now(),
+            show_fps: false,
         }
+    }
+
+    pub fn show_fps(&mut self, a: bool) {
+        self.show_fps = a;
     }
 
     pub fn set_fps(&mut self, fps: f64) {
@@ -30,6 +36,10 @@ impl WindowManager {
         let target = Duration::from_secs_f64(1.0 / self.target_fps);
         while Instant::now() - self.last_frame < target {
             yield_now();
+        }
+        if self.show_fps {
+            println!("{:?}", 1.0 / (Instant::now() - self.last_frame).as_secs_f64());
+            // todo!("Showing FPS is not implemented yet.")
         }
         self.last_frame = Instant::now();
         self.window.swap_buffers();

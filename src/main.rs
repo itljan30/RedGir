@@ -9,6 +9,7 @@ use input::input_manager::{Key, Action};
 
 fn main() {
     let mut engine: Engine = Engine::init();
+    // engine.show_fps(true);
 
     while engine.is_running() {
         let events = engine.get_key_events();
@@ -17,7 +18,7 @@ fn main() {
         for (key, action) in events {
             println!("{:?}: {:?}", key, action);
             match (key, action) {
-                (Key::Escape, Action::Held) => engine.stop(),
+                // (Key::Escape, Action::Held) => engine.stop(),
                 _ => {},
             }
         }

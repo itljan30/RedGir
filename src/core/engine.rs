@@ -23,6 +23,10 @@ impl Engine {
         }
     }
 
+    pub fn show_fps(&mut self, show: bool) {
+        self.window.show_fps(show);
+    }
+
     pub fn set_fps(&mut self, target_fps: f64) {
         self.window.set_fps(target_fps);
     }
