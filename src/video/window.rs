@@ -1,21 +1,37 @@
 use glfw::{Context, Glfw, PWindow, GlfwReceiver, WindowEvent};
 
+use std::time::{Instant, Duration};
+use std::thread::yield_now;
+
 pub struct WindowManager {
     window: PWindow,
+    target_fps: f64,
+    last_frame: Instant,
 }
 
 impl WindowManager {
     pub fn new(window: PWindow) -> Self {
         WindowManager{
             window,
+            target_fps: 60.0,
+            last_frame: Instant::now(),
         }
+    }
+
+    pub fn set_fps(&mut self, fps: f64) {
+        self.target_fps = fps;
     }
 
     pub fn shutdown(&mut self) {
         self.window.set_should_close(true);
     }
 
-    pub fn update(&mut self) {
+    pub fn swap_buffers(&mut self) {
+        let target = Duration::from_secs_f64(1.0 / self.target_fps);
+        while Instant::now() - self.last_frame < target {
+            yield_now();
+        }
+        self.last_frame = Instant::now();
         self.window.swap_buffers();
     }
 

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 #[derive(std::cmp::Eq)]
 #[derive(std::fmt::Debug)]
 #[derive(Hash)]
+#[derive(Clone)]
 pub enum Key {
     // Mouse
     MouseLeft, MouseRight, MouseMiddle, MouseScrollUp, MouseScrollDown,
@@ -36,6 +37,7 @@ pub enum Key {
     None,
 }
 
+#[derive(Clone)]
 #[derive(std::cmp::PartialEq)]
 #[derive(std::cmp::Eq)]
 #[derive(std::fmt::Debug)]
@@ -47,6 +49,7 @@ pub enum Action {
 }
 
 pub struct InputManager {
+    key_states: HashMap<Key, Action>,
     glfw_context: Glfw,
     event_listener: GlfwReceiver<(f64, WindowEvent)>,
 }
@@ -54,6 +57,7 @@ pub struct InputManager {
 impl InputManager {
     pub fn new(glfw_context: Glfw, event_listener: GlfwReceiver<(f64, WindowEvent)>) -> Self {
         InputManager{
+            key_states: HashMap::new(),
             glfw_context,
             event_listener,
         }
@@ -61,9 +65,15 @@ impl InputManager {
 
     pub fn read_events(&mut self) -> HashMap<Key, Action> {
         self.glfw_context.poll_events();
-        let mut events: HashMap<Key, Action> = HashMap::new();
 
-        // TODO Add mouse buttons and position
+        for (_, value) in self.key_states.iter_mut() {
+            match *value {
+                Action::Pressed => *value = Action::Held,
+                Action::Released => *value = Action::None,
+                _ => {},
+            }
+        }
+        self.key_states.retain(|_, value| *value != Action::None);
 
         for (_, event) in glfw::flush_messages(&self.event_listener) {
             let mut action: Action = Action::None;
@@ -72,18 +82,14 @@ impl InputManager {
             match event {
                 WindowEvent::Key(_, _, glfw::Action::Press, _) => action = Action::Pressed,
                 WindowEvent::Key(_, _, glfw::Action::Release, _) => action = Action::Released,
-                WindowEvent::Key(_, _, glfw::Action::Repeat, _) => action = Action::Held,
 
-                // FIXME mouse buttons don't seem to work
                 WindowEvent::MouseButton(_, glfw::Action::Press, _) => action = Action::Pressed,
                 WindowEvent::MouseButton(_, glfw::Action::Release, _) => action = Action::Released,
-                WindowEvent::MouseButton(_, glfw::Action::Repeat, _) => action = Action::Held,
                 _ => {},
             }
 
             match event {
                 // mouse
-                // FIXME mouse buttons don't seem to work
                 WindowEvent::MouseButton(glfw::MouseButton::Button1, _, _) => key = Key::MouseLeft,
                 WindowEvent::MouseButton(glfw::MouseButton::Button2, _, _) => key = Key::MouseRight,
                 WindowEvent::MouseButton(glfw::MouseButton::Button3, _, _) => key = Key::MouseMiddle,
@@ -210,10 +216,10 @@ impl InputManager {
                 _ => {},
             }
 
-            if key != Key::None {
-                events.insert(key, action);
+            if key != Key::None && action != Action::None {
+                self.key_states.insert(key, action);
             }
         }
-        return events;
+        return self.key_states.clone();
     }
 }

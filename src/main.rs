@@ -12,12 +12,16 @@ fn main() {
 
     while engine.is_running() {
         let events = engine.get_key_events();
+        engine.set_fps(144.0);
+
         for (key, action) in events {
             println!("{:?}: {:?}", key, action);
             match (key, action) {
-                // (Key::Escape, Action::Pressed) => engine.stop(),
+                (Key::Escape, Action::Held) => engine.stop(),
                 _ => {},
             }
         }
+        engine.draw_frame();
+        engine.display_frame();
     }
 }

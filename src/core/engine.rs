@@ -23,6 +23,10 @@ impl Engine {
         }
     }
 
+    pub fn set_fps(&mut self, target_fps: f64) {
+        self.window.set_fps(target_fps);
+    }
+
     pub fn stop(&mut self) {
         self.window.shutdown();
     }
@@ -36,10 +40,9 @@ impl Engine {
     }
 
     pub fn draw_frame(&self) {
-        todo!()
     }
 
-    pub fn display_frame(&self) {
-        todo!()
+    pub fn display_frame(&mut self) {
+        self.window.swap_buffers();
     }
 }
