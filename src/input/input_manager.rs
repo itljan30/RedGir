@@ -29,7 +29,7 @@ pub enum Key {
     CapsLock, NumLock, ScrollLock,
 
     // Navigation Keys
-    ArrowRight, ArrowLeft, ArrowDown, ArrowUp, Home, End, PageUp, PageDown,
+    ArrowRight, ArrowLeft, ArrowDown, ArrowUp, Home, End, PageUp, PageDown, Insert,
 
     // Function Keys
     F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
@@ -66,7 +66,7 @@ impl InputManager {
     pub fn read_events(&mut self) -> HashMap<Key, Action> {
         self.glfw_context.poll_events();
 
-        for (_, value) in self.key_states.iter_mut() {
+        for value in self.key_states.values_mut() {
             match *value {
                 Action::Pressed => *value = Action::Held,
                 Action::Released => *value = Action::None,
@@ -193,6 +193,7 @@ impl InputManager {
                 WindowEvent::Key(glfw::Key::PageDown, _, _, _) => key = Key::PageDown,
                 WindowEvent::Key(glfw::Key::Home, _, _, _) => key = Key::Home,
                 WindowEvent::Key(glfw::Key::End, _, _, _) => key = Key::End,
+                WindowEvent::Key(glfw::Key::Insert, _, _, _) => key = Key::Insert,
 
                 // non-aplha chars
                 WindowEvent::Key(glfw::Key::Escape, _, _, _) => key = Key::Escape,
@@ -220,6 +221,6 @@ impl InputManager {
                 self.key_states.insert(key, action);
             }
         }
-        return self.key_states.clone();
+        self.key_states.clone()
     }
 }

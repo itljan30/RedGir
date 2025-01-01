@@ -1,26 +1,59 @@
-use crate::assets::asset_manager::AssetManager;
 use crate::audio::audio_manager::AudioManager;
 use crate::input::input_manager::{InputManager, Key, Action};
-use crate::video::window::WindowManager;
+use crate::video::window::{WindowManager, GlfwWindow};
+use crate::video::color::Color;
 use crate::video::sprite::{Sprite, SpriteId};
 
 use std::collections::HashMap;
 
 pub struct Engine {
-    asset_manager: AssetManager,
     audio_manager: AudioManager,
     input_manager: InputManager,
     window: WindowManager,
 }
 
-impl Engine {
-    pub fn init() -> Self {
-        let (glfw, window, events) = WindowManager::glfw_init();
+impl Default for Engine {
+    fn default() -> Self {
+        let window = GlfwWindow::default();
         Engine {
-            asset_manager: AssetManager::new(),
             audio_manager: AudioManager::new(),
-            input_manager: InputManager::new(glfw, events),
-            window: WindowManager::new(window),
+            input_manager: InputManager::new(window.glfw, window.events),
+            window: WindowManager::new(window.window),
+        }
+    }
+}
+
+impl Engine {
+    pub fn new(
+        width: u32,
+        height: u32,
+        clear_color: Color,
+        window_name: &str,
+        show_cursor: bool,
+        is_bordered: bool,
+        is_resizable: bool,
+        should_poll_keys: bool,
+        should_poll_cursor_pos: bool,
+        should_poll_mouse_buttons: bool,
+        should_poll_scroll: bool,
+    ) -> Self {
+        let window = GlfwWindow::new(
+            width,
+            height,
+            clear_color,
+            window_name,
+            show_cursor,
+            is_bordered,
+            is_resizable,
+            should_poll_keys,
+            should_poll_cursor_pos,
+            should_poll_mouse_buttons,
+            should_poll_scroll,
+        );
+        Engine {
+            audio_manager: AudioManager::new(),
+            input_manager: InputManager::new(window.glfw, window.events),
+            window: WindowManager::new(window.window),
         }
     }
 
@@ -28,8 +61,8 @@ impl Engine {
         self.window.get_sprite(id)
     }
 
-    pub fn get_sprites_ids(&self) -> &HashMap<SpriteId, Sprite> {
-        self.window.get_sprites_ids()
+    pub fn get_all_sprites(&self) -> &HashMap<SpriteId, Sprite> {
+        self.window.get_all_sprites()
     }
 
     pub fn add_sprite(&mut self, sprite: Sprite) -> SpriteId {

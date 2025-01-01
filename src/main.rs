@@ -1,4 +1,3 @@
-pub mod assets;
 pub mod audio;
 pub mod core;
 pub mod input;
@@ -22,8 +21,7 @@ fn move_right(engine: &mut Engine, sprite: &SpriteId) {
 }
 
 fn main() {
-    let mut engine: Engine = Engine::init();
-    engine.set_fps(60.0);
+    let mut engine: Engine = Engine::default();
 
     let player: SpriteId = engine.add_sprite(get_new_sprite());
     let enemy: SpriteId = engine.add_sprite(get_new_sprite());
@@ -31,13 +29,14 @@ fn main() {
     while engine.is_running() {
         let events = engine.get_key_events();
         for (key, action) in events {
+            println!("{:?}: {:?}", key, action);
             match (key, action) {
                 (Key::D, Action::Pressed | Action::Held) => move_left(&mut engine, &player), 
                 (Key::A, Action::Pressed | Action::Held) => move_right(&mut engine, &player),
                 (Key::ArrowRight, Action::Pressed | Action::Held) => move_left(&mut engine, &enemy), 
                 (Key::ArrowLeft, Action::Pressed | Action::Held) => move_right(&mut engine, &enemy),
                 (Key::F5, Action::Pressed) => engine.toggle_show_fps(),
-                (Key::Enter, Action::Pressed) => engine.toggle_fullscreen(),
+                (Key::Enter, Action::Pressed) =>  engine.toggle_fullscreen(),
                 (Key::Escape, Action::Pressed) => engine.stop(),
                 _ => {},
             }
