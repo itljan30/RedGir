@@ -1,11 +1,7 @@
 use glfw::{Glfw, GlfwReceiver, WindowEvent};
 use std::collections::HashMap;
 
-#[derive(std::cmp::PartialEq)]
-#[derive(std::cmp::Eq)]
-#[derive(std::fmt::Debug)]
-#[derive(Hash)]
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Key {
     // Mouse
     MouseLeft, MouseRight, MouseMiddle, MouseScrollUp, MouseScrollDown,
@@ -37,10 +33,7 @@ pub enum Key {
     None,
 }
 
-#[derive(Clone)]
-#[derive(std::cmp::PartialEq)]
-#[derive(std::cmp::Eq)]
-#[derive(std::fmt::Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Action {
     Pressed,
     Released,

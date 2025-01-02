@@ -36,7 +36,10 @@ fn main() {
                 (Key::ArrowRight, Action::Pressed | Action::Held) => move_left(&mut engine, &enemy), 
                 (Key::ArrowLeft, Action::Pressed | Action::Held) => move_right(&mut engine, &enemy),
                 (Key::F5, Action::Pressed) => engine.toggle_show_fps(),
-                (Key::Enter, Action::Pressed) =>  engine.toggle_fullscreen(),
+                (Key::Enter, Action::Pressed) => {
+                    engine.toggle_fullscreen();
+                    engine.toggle_border();
+                }
                 (Key::Escape, Action::Pressed) => engine.stop(),
                 _ => {},
             }

@@ -101,6 +101,10 @@ impl Engine {
         return self.window.is_running();
     }
 
+    pub fn toggle_border(&mut self) {
+        self.window.toggle_border();
+    }
+
     pub fn draw_frame(&mut self) {
         self.window.draw_frame();
     }

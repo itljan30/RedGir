@@ -1,5 +1,6 @@
 use crate::video::texture::Texture;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Flip {
     None,
     FlipX,
@@ -7,9 +8,7 @@ pub enum Flip {
     FlipXY,
 }
 
-#[derive(Eq)]
-#[derive(Clone)]
-#[derive(Hash)]
+#[derive(Clone, Copy, Eq, Debug, Hash)]
 pub struct SpriteId {
     id: u64,
 }

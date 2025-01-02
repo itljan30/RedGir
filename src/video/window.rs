@@ -1,6 +1,7 @@
 use glfw::{Context, Glfw, PWindow, GlfwReceiver, WindowEvent};
 use gl;
 
+use crate::core::timer::Timer;
 use crate::video::sprite::{Sprite, SpriteId};
 use crate::video::color::Color;
 
@@ -112,8 +113,8 @@ impl GlfwWindow {
 
 pub struct WindowManager {
     window: PWindow,
-    target_fps: f64,
-    last_frame: Instant,
+    target_frame_time: f64,
+    timer: Timer,
     show_fps: bool,
     sprites: HashMap<SpriteId, Sprite>,
     last_sprite_id: u64,
@@ -123,8 +124,8 @@ impl WindowManager {
     pub fn new(window: PWindow) -> Self {
         WindowManager{
             window,
-            target_fps: 60.0,
-            last_frame: Instant::now(),
+            target_frame_time: 1.0 / 60.0,
+            timer: Timer::new(),
             show_fps: false,
             sprites: HashMap::new(),
             last_sprite_id: 0
@@ -155,6 +156,15 @@ impl WindowManager {
         self.sprites.remove(sprite_id);
     }
 
+    pub fn toggle_border(&mut self) {
+        if self.window.is_decorated() {
+            self.window.set_decorated(false);
+        }
+        else {
+            self.window.set_decorated(true);
+        }
+    }
+
     pub fn toggle_fullscreen(&mut self) {
         if !self.window.is_maximized() {
             self.window.maximize();
@@ -176,7 +186,7 @@ impl WindowManager {
     }
 
     pub fn set_fps(&mut self, fps: f64) {
-        self.target_fps = fps;
+        self.target_frame_time = 1.0 / fps;
     }
 
     pub fn shutdown(&mut self) {
@@ -187,14 +197,16 @@ impl WindowManager {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-        let target = Duration::from_secs_f64(1.0 / self.target_fps);
-        while Instant::now() - self.last_frame < target {
+
+        while self.timer.get_elapsed() < self.target_frame_time {
             yield_now();
         }
+
         if self.show_fps {
-            println!("{:?}", 1.0 / (Instant::now() - self.last_frame).as_secs_f64());
+            println!("{:?}", 1.0 / self.timer.get_elapsed());
         }
-        self.last_frame = Instant::now();
+
+        self.timer.reset();
         self.window.swap_buffers();
     }
 
