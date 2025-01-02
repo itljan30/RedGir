@@ -1,109 +1,18 @@
-use glfw::{Context, Glfw, PWindow, GlfwReceiver, WindowEvent};
-use gl::types::{GLint, GLuint, GLsizeiptr};
+use glfw::{Context, PWindow};
+// use gl::types::{GLint, GLuint, GLsizeiptr};
 
 use crate::core::timer::Timer;
 use crate::video::sprite::{Sprite, SpriteId};
-use crate::video::color::Color;
-use crate::video::texture::Texture;
-use crate::video::shader_manager::ShaderId;
+use crate::video::shader_manager::{ShaderId, ShaderProgram, VertexShader, FragmentShader};
+// use crate::video::glfw_window::GlfwWindow;
 
 use std::thread::yield_now;
 use std::collections::HashMap;
-use std::ffi::c_void;
+// use std::ffi::c_void;
 
-pub struct GlfwWindow {
-    pub glfw: Glfw,
-    pub window: PWindow,
-    pub events: GlfwReceiver<(f64, WindowEvent)>,
-}
-
-impl Default for GlfwWindow {
-    fn default() -> Self {
-        Self::new(
-            800, 600,
-            Color::DARK_GRAY,
-            "Window",
-            true, true, true, true, true, true, true,
-        )
-
-    }
-}
-
-impl GlfwWindow {
-    pub fn new(
-        width: u32,
-        height: u32,
-        clear_color: Color,
-        window_name: &str,
-        show_cursor: bool,
-        is_bordered: bool,
-        is_resizable: bool,
-        should_poll_keys: bool,
-        should_poll_cursor_pos: bool,
-        should_poll_mouse_buttons: bool,
-        should_poll_scroll: bool
-    ) -> Self {
-        use glfw::fail_on_errors;
-        let mut glfw = glfw::init(fail_on_errors!()).unwrap();
-
-        if is_resizable {
-            glfw.window_hint(glfw::WindowHint::Resizable(true)); 
-        }
-        else {
-            glfw.window_hint(glfw::WindowHint::Resizable(false));
-        }
-        if is_bordered {
-            glfw.window_hint(glfw::WindowHint::Decorated(true));
-        }
-        else {
-            glfw.window_hint(glfw::WindowHint::Decorated(false));
-        }
-
-        glfw.window_hint(glfw::WindowHint::ScaleToMonitor(true));
-        glfw.window_hint(glfw::WindowHint::AlphaBits(Some(8)));
-
-        // Create a windowed mode window and its OpenGL context
-        let (mut window, events) = glfw.create_window(width, height, window_name, glfw::WindowMode::Windowed)
-            .expect("Failed to create GLFW window.");
-
-        gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
-
-        window.set_framebuffer_size_polling(true);
-        window.set_framebuffer_size_callback(|_, width, height| {
-            unsafe {
-                gl::Viewport(0, 0, width as i32, height as i32);
-            }
-        });
-
-        let (red, green, blue, alpha) = clear_color.to_tuple();
-        let r = red as f32 / 255.0;
-        let g = green as f32 / 255.0;
-        let b = blue as f32 / 255.0;
-        let a = alpha as f32 / 255.0;
-        unsafe {
-            gl::ClearColor(r.clamp(0.0, 1.0), g.clamp(0.0, 1.0), b.clamp(0.0, 1.0), a.clamp(0.0, 1.0));
-        }
-
-        // Make the window's context current
-        window.make_current();
-        if should_poll_keys {window.set_key_polling(true)};
-        if should_poll_scroll {window.set_scroll_polling(true)};
-        if should_poll_cursor_pos {window.set_cursor_pos_polling(true)};
-        if should_poll_mouse_buttons {window.set_mouse_button_polling(true)};
-
-        if show_cursor {
-            window.set_cursor_mode(glfw::CursorMode::Normal);
-        }
-        else {
-            window.set_cursor_mode(glfw::CursorMode::Hidden);
-        }
-
-        GlfwWindow {
-            glfw, 
-            window, 
-            events
-        }
-    }
+pub enum ImageType {
+    JPEG,
+    PNG,
 }
 
 pub struct WindowManager {
@@ -113,11 +22,14 @@ pub struct WindowManager {
     show_fps: bool,
     sprites: HashMap<SpriteId, Sprite>,
     last_sprite_id: u64,
-    default_shader: ShaderId,
+    shaders: Vec<ShaderProgram>,
 }
 
 impl WindowManager {
-    pub fn new(default_shader: ShaderId, window: PWindow) -> Self {
+    pub fn new(window: PWindow) -> Self {
+        let mut default_shader = ShaderProgram::default();
+        default_shader.compile_and_link();
+        default_shader.use_shader();
         WindowManager{
             window,
             target_frame_time: 1.0 / 60.0,
@@ -125,17 +37,20 @@ impl WindowManager {
             show_fps: false,
             sprites: HashMap::new(),
             last_sprite_id: 0,
-            default_shader,
+            shaders: vec![default_shader],
         }
-    }
-
-    pub fn draw_shape(&mut self, x: f32, y: f32, vertices: Vec<[f32; 3]>, color: Color, shader: Option<ShaderId>) -> SpriteId {
-        let sprite = Sprite::new(Texture::NONE, x, y, vertices, color, shader);
-        self.add_sprite(sprite)
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
         self.sprites.get_mut(&id)
+    }
+
+    pub fn add_shader(&mut self, vertex_shader: VertexShader, fragment_shader: FragmentShader) -> ShaderId {
+        let mut shader = ShaderProgram::new(vertex_shader, fragment_shader);
+        shader.compile_and_link();
+        let id = ShaderId::new(shader.id);
+        self.shaders.push(shader);
+        id
     }
 
     pub fn get_all_sprites(&self) -> &HashMap<SpriteId, Sprite> {
@@ -204,21 +119,23 @@ impl WindowManager {
         self.window.swap_buffers();
     }
 
-    pub fn draw_frame(&mut self) {
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-        // let mut vbos: Vec<GLuint> = Vec::new();
+    // TODO just add gl error reporting so that I can figure what is going on
+    // to use custom shaders I should make it so that it sorts the sprites by shader and then
+    // creates a separate vao for each shader used, then send them in separately
+    pub unsafe fn draw_frame(&mut self) {
+        gl::Clear(gl::COLOR_BUFFER_BIT);
+
+        // let mut vao: GLuint = 0;
+        // gl::GenVertexArrays(1, &mut vao);
+        // gl::BindVertexArray(vao);
+        //
         // for sprite in self.sprites.values() {
-        //     vbos.push(get_vbo_from_sprite(sprite));
+        //     add_vbo_from_sprite(sprite);
         // }
         //
-        // let vao = get_vao_from_vbos(vbos);
-        //
-        // unsafe {
-        //     gl::BindVertexArray(vao);
-        //     // gl::DrawElements()
-        // }
+        // gl::UseProgram(self.default_shader.id);
+        // gl::DrawArrays(gl::TRIANGLES, 0, 3);
+        // gl::BindVertexArray(0);
 
         self.swap_buffers();
     }
@@ -228,10 +145,16 @@ impl WindowManager {
     }
 }
 
-fn get_vao_from_vbos(vbos: Vec<GLuint>) -> GLuint {
-    todo!()
-}
-
-fn get_vbo_from_sprite(sprite: &Sprite) -> GLuint {
-    todo!()
-}
+// unsafe fn add_vbo_from_sprite(sprite: &Sprite) {
+//     let mut vbo: GLuint = 0;
+//     gl::GenBuffers(1, &mut vbo);
+//     gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+//     gl::BufferData(
+//         gl::ARRAY_BUFFER,
+//         sprite.vertices.len() as GLsizeiptr,
+//         sprite.vertices.as_ptr() as *const c_void,
+//         gl::DYNAMIC_DRAW
+//     );
+//     gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 3 * size_of::<f32>() as GLint, 0 as *const c_void);
+//     gl::EnableVertexAttribArray(0);
+// }

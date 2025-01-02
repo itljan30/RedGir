@@ -22,7 +22,7 @@ void main() {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct ShaderId {
-    id: GLuint,
+    pub id: GLuint,
 }
 
 impl ShaderId {

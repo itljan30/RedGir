@@ -1,14 +1,14 @@
 use crate::audio::audio_manager::AudioManager;
 use crate::input::input_manager::{InputManager, Key, Action};
-use crate::video::window::{WindowManager, GlfwWindow};
+use crate::video::window::WindowManager;
 use crate::video::color::Color;
 use crate::video::sprite::{Sprite, SpriteId};
-use crate::video::shader_manager::{ShaderId, ShaderProgram, FragmentShader, VertexShader};
+use crate::video::shader_manager::{ShaderId, FragmentShader, VertexShader};
+use crate::video::glfw_window::GlfwWindow;
 
 use std::collections::HashMap;
 
 pub struct Engine {
-    shaders: Vec<ShaderProgram>,
     audio_manager: AudioManager,
     input_manager: InputManager,
     window: WindowManager,
@@ -18,15 +18,10 @@ impl Default for Engine {
     fn default() -> Self {
         let window = GlfwWindow::default();
 
-        let mut default_shader = ShaderProgram::default();
-        default_shader.compile_and_link();
-        let shader_id = ShaderId::new(default_shader.id);
-        default_shader.use_shader();
         Engine {
-            shaders: vec![default_shader],
             audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
-            window: WindowManager::new(shader_id, window.window),
+            window: WindowManager::new(window.window),
         }
     }
 }
@@ -58,32 +53,15 @@ impl Engine {
             should_poll_mouse_buttons,
             should_poll_scroll,
         );
-
-        let mut default_shader = ShaderProgram::default();
-
-        default_shader.compile_and_link();
-        let shader_id = ShaderId::new(default_shader.id);
-
-        default_shader.use_shader();
-
         Engine {
-            shaders: vec![default_shader],
             audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
-            window: WindowManager::new(shader_id, window.window),
+            window: WindowManager::new(window.window),
         }
     }
 
     pub fn add_shader(&mut self, vertex_shader: VertexShader, fragment_shader: FragmentShader) -> ShaderId {
-        let mut shader = ShaderProgram::new(vertex_shader, fragment_shader);
-        shader.compile_and_link();
-        let id = ShaderId::new(shader.id);
-        self.shaders.push(shader);
-        id
-    }
-
-    pub fn draw_shape(&mut self, x: f32, y: f32, vertices: Vec<[f32; 3]>, color: Color, shader: Option<ShaderId>) -> SpriteId {
-        self.window.draw_shape(x, y, vertices, color, shader)
+        self.window.add_shader(vertex_shader, fragment_shader)
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
@@ -135,6 +113,8 @@ impl Engine {
     }
 
     pub fn draw_frame(&mut self) {
-        self.window.draw_frame();
+        unsafe {
+            self.window.draw_frame();
+        }
     }
 }

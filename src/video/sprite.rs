@@ -1,6 +1,5 @@
-use crate::video::texture::Texture;
-use crate::video::color::Color;
 use crate::video::shader_manager::ShaderId;
+use crate::video::window::ImageType;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Flip {
@@ -8,6 +7,49 @@ pub enum Flip {
     FlipX,
     FlipY,
     FlipXY,
+}
+
+pub struct SpriteSheet {
+    image_type: ImageType,
+    source: String,
+    sheet_width: u32,
+    sheet_height: u32,
+    sprite_width: u32,
+    sprite_height: u32,
+}
+
+impl SpriteSheet {
+    pub fn new(
+        image_type: ImageType,
+        source: String, 
+        sprite_width: u32, 
+        sprite_height: u32
+    ) -> Self {
+        SpriteSheet {
+            image_type,
+            source,
+            sheet_width: 0,
+            sheet_height: 0,
+            sprite_width,
+            sprite_height,
+        }
+    }
+}
+
+pub struct Texture {
+    texture_source: String,
+    width: u32,
+    height: u32,
+}
+
+impl Texture {
+    pub fn new(texture_source: String, width: u32, height: u32) -> Self {
+        Texture {
+            texture_source,
+            width,
+            height,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Eq, Debug, Hash)]
@@ -29,49 +71,64 @@ impl SpriteId {
     }
 }
 
+/**
+ * Sprites are rectangles with a texture
+ * x: i32, and y: i32 are the top left pixel of the sprite
+ *  
+ */
 pub struct Sprite {
     texture: Texture,
-    pub vertices: Vec<[f32; 3]>,
-    x: f32,
-    y: f32,
+    x_position: i32,
+    y_position: i32,
     sprite_id: SpriteId,
     scale: f32,
     rotation: f32,
     flip: Flip,
-    color: Color,
     shader: Option<ShaderId>,
 }
 
 impl Sprite {
     pub fn new(
         texture: Texture, 
-        x: f32, y: f32, 
-        vertices: Vec<[f32; 3]>, 
-        color: Color, 
         shader: Option<ShaderId>
         ) -> Self {
 
         Sprite {
-            x,
-            y,
+            x_position: 0,
+            y_position: 0,
             texture,
-            vertices,
             sprite_id: SpriteId::new(0),
             rotation: 0.0,
             scale: 0.0,
             flip: Flip::None,
-            color,
             shader,
         }
     }
 
-    pub fn get_position(&self) -> (&f32, &f32) {
-        (&self.x, &self.y)
+    pub fn from_sprite_sheet(
+        sprite_sheet: SpriteSheet,
+        index: u32,
+        shader: Option<ShaderId>,
+    ) {
+        // Sprite {
+        //     todo!("Add a way to get texture from spritesheet")
+        //     x_position: 0,
+        //     y_position: 0,
+        //     shader,
+        //     rotation: 0.0,
+        //     scale: 0.0,
+        //     flip: Flip::None,
+        //     sprite_id: SpriteId::new(0),
+        // }
     }
 
-    pub fn translate(&mut self, dx: f32, dy: f32) -> &mut Self {
-        self.x += dx;
-        self.y += dy;
+    pub fn get_position(&self) -> (&i32, &i32) {
+        (&self.x_position, &self.y_position)
+    }
+
+    pub fn translate(&mut self, dx: i32, dy: i32) -> &mut Self {
+        self.x_position += dx;
+        self.y_position += dy;
         self
     }
 
@@ -88,9 +145,9 @@ impl Sprite {
         self
     }
 
-    pub fn set_position(&mut self, x: f32, y: f32) -> &mut Self {
-        self.x = x;
-        self.y = y;
+    pub fn set_position(&mut self, x: i32, y: i32) -> &mut Self {
+        self.x_position = x;
+        self.y_position = y;
         self
     }
 
