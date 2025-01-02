@@ -14,3 +14,7 @@ impl Default for Texture {
         }
     }
 }
+
+impl Texture {
+    pub const NONE: Texture = Texture{id: 0, width: 10, height: 10};
+}

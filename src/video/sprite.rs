@@ -1,4 +1,6 @@
 use crate::video::texture::Texture;
+use crate::video::color::Color;
+use crate::video::shader_manager::ShaderId;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Flip {
@@ -29,32 +31,45 @@ impl SpriteId {
 
 pub struct Sprite {
     texture: Texture,
-    x: f64,
-    y: f64,
+    pub vertices: Vec<[f32; 3]>,
+    x: f32,
+    y: f32,
     sprite_id: SpriteId,
-    scale: f64,
-    rotation: f64,
+    scale: f32,
+    rotation: f32,
     flip: Flip,
+    color: Color,
+    shader: Option<ShaderId>,
 }
 
 impl Sprite {
-    pub fn new(texture: Texture, x: f64, y: f64) -> Self {
+    pub fn new(
+        texture: Texture, 
+        x: f32, y: f32, 
+        vertices: Vec<[f32; 3]>, 
+        color: Color, 
+        shader: Option<ShaderId>
+        ) -> Self {
+
         Sprite {
-            texture,
             x,
             y,
+            texture,
+            vertices,
             sprite_id: SpriteId::new(0),
             rotation: 0.0,
             scale: 0.0,
             flip: Flip::None,
+            color,
+            shader,
         }
     }
 
-    pub fn get_position(&self) -> (&f64, &f64) {
+    pub fn get_position(&self) -> (&f32, &f32) {
         (&self.x, &self.y)
     }
 
-    pub fn translate(&mut self, dx: f64, dy: f64) -> &mut Self {
+    pub fn translate(&mut self, dx: f32, dy: f32) -> &mut Self {
         self.x += dx;
         self.y += dy;
         self
@@ -73,18 +88,18 @@ impl Sprite {
         self
     }
 
-    pub fn set_position(&mut self, x: f64, y: f64) -> &mut Self {
+    pub fn set_position(&mut self, x: f32, y: f32) -> &mut Self {
         self.x = x;
         self.y = y;
         self
     }
 
-    pub fn set_scale(&mut self, scale: f64) -> &mut Self {
+    pub fn set_scale(&mut self, scale: f32) -> &mut Self {
         self.scale = scale;
         self
     }
 
-    pub fn set_rotation(&mut self, rotation: f64) -> &mut Self {
+    pub fn set_rotation(&mut self, rotation: f32) -> &mut Self {
         self.rotation = rotation;
         self
     }

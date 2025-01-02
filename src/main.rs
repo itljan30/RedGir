@@ -5,41 +5,32 @@ pub mod video;
 
 use core::engine::Engine;
 use input::input_manager::{Key, Action};
-use video::sprite::{Sprite, SpriteId};
-use video::texture::Texture;
+use video::color::Color;
 
-fn get_new_sprite() -> Sprite {
-    Sprite::new(Texture::default(), 0.0, 0.0)
-}
-
-fn move_left(engine: &mut Engine, sprite: &SpriteId) {
-    engine.get_sprite(sprite.clone()).unwrap().translate(0.5, 0.0);
-}
-
-fn move_right(engine: &mut Engine, sprite: &SpriteId) {
-    engine.get_sprite(sprite.clone()).unwrap().translate(-0.5, 0.0);
+fn get_triangle() -> Vec<[f32; 3]> {
+    vec![
+        [0.0,  0.5, 1.0], // Top vertex
+        [-0.5, -0.5, 1.0], // Bottom-left vertex
+        [0.5, -0.5, 1.0], // Bottom-right vertex
+    ]
 }
 
 fn main() {
-    let mut engine: Engine = Engine::default();
-
-    let player: SpriteId = engine.add_sprite(get_new_sprite());
-    let enemy: SpriteId = engine.add_sprite(get_new_sprite());
+    let mut engine: Engine = Engine::new(
+        800, 600,
+        Color::DARK_GRAY,
+        "Test Game",
+        true, true, true, true, 
+        false, false, false,
+    );
 
     while engine.is_running() {
         let events = engine.get_key_events();
         for (key, action) in events {
             println!("{:?}: {:?}", key, action);
             match (key, action) {
-                (Key::D, Action::Pressed | Action::Held) => move_left(&mut engine, &player), 
-                (Key::A, Action::Pressed | Action::Held) => move_right(&mut engine, &player),
-                (Key::ArrowRight, Action::Pressed | Action::Held) => move_left(&mut engine, &enemy), 
-                (Key::ArrowLeft, Action::Pressed | Action::Held) => move_right(&mut engine, &enemy),
                 (Key::F5, Action::Pressed) => engine.toggle_show_fps(),
-                (Key::Enter, Action::Pressed) => {
-                    engine.toggle_fullscreen();
-                    engine.toggle_border();
-                }
+                (Key::Enter, Action::Pressed) => _ = engine.draw_shape(400.0, 300.0, get_triangle(), Color::RED, None),
                 (Key::Escape, Action::Pressed) => engine.stop(),
                 _ => {},
             }

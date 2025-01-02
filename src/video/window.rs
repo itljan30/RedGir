@@ -1,13 +1,15 @@
 use glfw::{Context, Glfw, PWindow, GlfwReceiver, WindowEvent};
-use gl;
+use gl::types::{GLint, GLuint, GLsizeiptr};
 
 use crate::core::timer::Timer;
 use crate::video::sprite::{Sprite, SpriteId};
 use crate::video::color::Color;
+use crate::video::texture::Texture;
+use crate::video::shader_manager::ShaderId;
 
-use std::time::{Instant, Duration};
 use std::thread::yield_now;
 use std::collections::HashMap;
+use std::ffi::c_void;
 
 pub struct GlfwWindow {
     pub glfw: Glfw,
@@ -18,17 +20,10 @@ pub struct GlfwWindow {
 impl Default for GlfwWindow {
     fn default() -> Self {
         Self::new(
-            800,
-            600,
+            800, 600,
             Color::DARK_GRAY,
             "Window",
-            true,
-            true,
-            true,
-            true,
-            true,
-            true,
-            true,
+            true, true, true, true, true, true, true,
         )
 
     }
@@ -118,22 +113,25 @@ pub struct WindowManager {
     show_fps: bool,
     sprites: HashMap<SpriteId, Sprite>,
     last_sprite_id: u64,
+    default_shader: ShaderId,
 }
 
 impl WindowManager {
-    pub fn new(window: PWindow) -> Self {
+    pub fn new(default_shader: ShaderId, window: PWindow) -> Self {
         WindowManager{
             window,
             target_frame_time: 1.0 / 60.0,
             timer: Timer::new(),
             show_fps: false,
             sprites: HashMap::new(),
-            last_sprite_id: 0
+            last_sprite_id: 0,
+            default_shader,
         }
     }
 
-
-    pub fn draw_point(&mut self, x: f64, y: f64) {
+    pub fn draw_shape(&mut self, x: f32, y: f32, vertices: Vec<[f32; 3]>, color: Color, shader: Option<ShaderId>) -> SpriteId {
+        let sprite = Sprite::new(Texture::NONE, x, y, vertices, color, shader);
+        self.add_sprite(sprite)
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
@@ -194,31 +192,33 @@ impl WindowManager {
     }
 
     pub fn swap_buffers(&mut self) {
-        unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-
         while self.timer.get_elapsed() < self.target_frame_time {
             yield_now();
         }
 
         if self.show_fps {
-            println!("{:?}", 1.0 / self.timer.get_elapsed());
+            println!("{:.2}", 1.0 / self.timer.get_elapsed());
         }
 
         self.timer.reset();
         self.window.swap_buffers();
     }
 
-    // BUG? I probably need a &mut self in order to call drawing functions on self.window
-    fn draw_sprite(&self, sprite: &Sprite) {
-        
-    }
-
     pub fn draw_frame(&mut self) {
-        for sprite in self.sprites.values() {
-            self.draw_sprite(sprite);
+        unsafe {
+            gl::Clear(gl::COLOR_BUFFER_BIT);
         }
+        // let mut vbos: Vec<GLuint> = Vec::new();
+        // for sprite in self.sprites.values() {
+        //     vbos.push(get_vbo_from_sprite(sprite));
+        // }
+        //
+        // let vao = get_vao_from_vbos(vbos);
+        //
+        // unsafe {
+        //     gl::BindVertexArray(vao);
+        //     // gl::DrawElements()
+        // }
 
         self.swap_buffers();
     }
@@ -226,4 +226,12 @@ impl WindowManager {
     pub fn is_running(&self) -> bool {
         return !self.window.should_close();
     }
+}
+
+fn get_vao_from_vbos(vbos: Vec<GLuint>) -> GLuint {
+    todo!()
+}
+
+fn get_vbo_from_sprite(sprite: &Sprite) -> GLuint {
+    todo!()
 }
