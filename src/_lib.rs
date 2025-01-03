@@ -1,10 +1,12 @@
 mod video;
 mod input;
-mod core;
 mod audio;
+mod engine;
+mod utility;
 
-pub use core::engine::Engine;
+pub use engine::Engine;
 pub use input::input_manager::{Key, Action};
 pub use video::color::Color;
-pub use video::sprite::{Sprite, Flip};
-pub use video::texture::Texture;
+pub use video::sprite::{Sprite, Flip, SpriteSheet, Texture};
+pub use video::shader_manager::{ShaderId, VertexShader, FragmentShader};
+pub use utility::timer::Timer;

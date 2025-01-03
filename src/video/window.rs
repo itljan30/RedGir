@@ -1,55 +1,66 @@
 use glfw::{Context, PWindow};
-// use gl::types::{GLint, GLuint, GLsizeiptr};
+use gl::types::{GLint, GLuint, GLsizeiptr};
 
-use crate::core::timer::Timer;
-use crate::video::sprite::{Sprite, SpriteId};
+use crate::utility::timer::Timer;
+use crate::video::sprite::{Sprite, SpriteId, SpriteSheetId, SpriteSheet, ImageType};
 use crate::video::shader_manager::{ShaderId, ShaderProgram, VertexShader, FragmentShader};
-// use crate::video::glfw_window::GlfwWindow;
 
 use std::thread::yield_now;
 use std::collections::HashMap;
-// use std::ffi::c_void;
-
-pub enum ImageType {
-    JPEG,
-    PNG,
-}
+use std::ffi::c_void;
 
 pub struct WindowManager {
     window: PWindow,
-    target_frame_time: f64,
-    timer: Timer,
-    show_fps: bool,
+    sprite_sheets: HashMap<SpriteSheetId, SpriteSheet>,
     sprites: HashMap<SpriteId, Sprite>,
+    shaders: HashMap<ShaderId, ShaderProgram>,
+    timer: Timer,
+    target_frame_time: f64,
+    show_fps: bool,
     last_sprite_id: u64,
-    shaders: Vec<ShaderProgram>,
 }
 
 impl WindowManager {
     pub fn new(window: PWindow) -> Self {
+        let mut shaders = HashMap::new();
+
         let mut default_shader = ShaderProgram::default();
         default_shader.compile_and_link();
-        default_shader.use_shader();
+        let shader = ShaderId::new(default_shader.id);
+
+        shaders.insert(shader, default_shader);
+
         WindowManager{
             window,
-            target_frame_time: 1.0 / 60.0,
-            timer: Timer::new(),
-            show_fps: false,
+            sprite_sheets: HashMap::new(),
             sprites: HashMap::new(),
+            shaders,
+            timer: Timer::new(),
+            target_frame_time: 1.0 / 60.0,
+            show_fps: false,
             last_sprite_id: 0,
-            shaders: vec![default_shader],
         }
     }
 
-    pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
-        self.sprites.get_mut(&id)
+    pub fn add_sprite_sheet(
+        &mut self,
+        image_type: ImageType,
+        source: String,
+        sprite_width: u32, 
+        sprite_height: u32
+    ) -> SpriteSheetId {
+        todo!()
+    }
+
+    pub fn get_sprite(&mut self, id: &SpriteId) -> Option<&mut Sprite> {
+        self.sprites.get_mut(id)
     }
 
     pub fn add_shader(&mut self, vertex_shader: VertexShader, fragment_shader: FragmentShader) -> ShaderId {
         let mut shader = ShaderProgram::new(vertex_shader, fragment_shader);
         shader.compile_and_link();
         let id = ShaderId::new(shader.id);
-        self.shaders.push(shader);
+        self.shaders.insert(id.clone(), shader);
         id
     }
 
@@ -125,18 +136,6 @@ impl WindowManager {
     pub unsafe fn draw_frame(&mut self) {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
-        // let mut vao: GLuint = 0;
-        // gl::GenVertexArrays(1, &mut vao);
-        // gl::BindVertexArray(vao);
-        //
-        // for sprite in self.sprites.values() {
-        //     add_vbo_from_sprite(sprite);
-        // }
-        //
-        // gl::UseProgram(self.default_shader.id);
-        // gl::DrawArrays(gl::TRIANGLES, 0, 3);
-        // gl::BindVertexArray(0);
-
         self.swap_buffers();
     }
 
@@ -145,16 +144,6 @@ impl WindowManager {
     }
 }
 
-// unsafe fn add_vbo_from_sprite(sprite: &Sprite) {
-//     let mut vbo: GLuint = 0;
-//     gl::GenBuffers(1, &mut vbo);
-//     gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-//     gl::BufferData(
-//         gl::ARRAY_BUFFER,
-//         sprite.vertices.len() as GLsizeiptr,
-//         sprite.vertices.as_ptr() as *const c_void,
-//         gl::DYNAMIC_DRAW
-//     );
-//     gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 3 * size_of::<f32>() as GLint, 0 as *const c_void);
-//     gl::EnableVertexAttribArray(0);
-// }
+unsafe fn add_vbo_from_sprite(sprite: &Sprite) {
+    todo!()
+}

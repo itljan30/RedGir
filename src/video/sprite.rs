@@ -1,5 +1,4 @@
 use crate::video::shader_manager::ShaderId;
-use crate::video::window::ImageType;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Flip {
@@ -7,6 +6,16 @@ pub enum Flip {
     FlipX,
     FlipY,
     FlipXY,
+}
+
+pub enum ImageType {
+    JPEG,
+    PNG,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub struct SpriteSheetId {
+    id: u32,
 }
 
 pub struct SpriteSheet {
@@ -34,21 +43,31 @@ impl SpriteSheet {
             sprite_height,
         }
     }
+
+    pub fn from_image(source: String) -> Self {
+        todo!()
+    }
 }
 
 pub struct Texture {
-    texture_source: String,
+    image_type: ImageType,
+    texture_source: SpriteSheet,
     width: u32,
     height: u32,
 }
 
 impl Texture {
-    pub fn new(texture_source: String, width: u32, height: u32) -> Self {
+    pub fn from_image(image_type: ImageType, texture_source: String, width: u32, height: u32) -> Self {
         Texture {
-            texture_source,
+            image_type,
+            texture_source: SpriteSheet::from_image(texture_source),
             width,
             height,
         }
+    }
+
+    pub fn from_sprite_sheet(sprite_sheet: &SpriteSheetId, index: u32) -> Self {
+        todo!();
     }
 }
 
@@ -81,7 +100,8 @@ pub struct Sprite {
     x_position: i32,
     y_position: i32,
     sprite_id: SpriteId,
-    scale: f32,
+    scale_x: f32,
+    scale_y: f32,
     rotation: f32,
     flip: Flip,
     shader: Option<ShaderId>,
@@ -99,7 +119,8 @@ impl Sprite {
             texture,
             sprite_id: SpriteId::new(0),
             rotation: 0.0,
-            scale: 0.0,
+            scale_x: 0.0,
+            scale_y: 0.0,
             flip: Flip::None,
             shader,
         }
@@ -140,6 +161,11 @@ impl Sprite {
         self.sprite_id = SpriteId::new(id);
     }
 
+    pub fn set_shader(&mut self, shader: Option<ShaderId>) -> &mut Self {
+        self.shader = shader;
+        self
+    }
+
     pub fn set_texture(&mut self, texture: Texture) -> &mut Self {
         self.texture = texture;
         self
@@ -151,8 +177,9 @@ impl Sprite {
         self
     }
 
-    pub fn set_scale(&mut self, scale: f32) -> &mut Self {
-        self.scale = scale;
+    pub fn set_scale(&mut self, scale_x: f32, scale_y: f32) -> &mut Self {
+        self.scale_x = scale_x;
+        self.scale_y = scale_y;
         self
     }
 

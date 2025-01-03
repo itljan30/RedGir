@@ -20,7 +20,7 @@ void main() {
 }
 "#;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct ShaderId {
     pub id: GLuint,
 }
@@ -140,6 +140,8 @@ unsafe fn compile_shader(source: &CString, shader_type: GLenum) -> GLuint {
     let id = gl::CreateShader(shader_type);
     gl::ShaderSource(id, 1, &source.as_ptr(), ptr::null());
     gl::CompileShader(id);
+
+    // TODO check for errors
 
     let mut success: GLint = 0;
     gl::GetShaderiv(id, gl::COMPILE_STATUS, &mut success);
