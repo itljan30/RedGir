@@ -102,7 +102,7 @@ impl Engine {
         self.window.toggle_show_fps();
     }
 
-    pub fn set_fps(&mut self, target_fps: f64) {
+    pub fn set_fps(&mut self, target_fps: f32) {
         self.window.set_fps(target_fps);
     }
 

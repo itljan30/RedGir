@@ -1,5 +1,4 @@
 use glfw::{Context, PWindow};
-use gl::types::{GLint, GLuint, GLsizeiptr};
 
 use crate::utility::timer::Timer;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheetId, SpriteSheet, ImageType};
@@ -7,7 +6,6 @@ use crate::video::shader_manager::{ShaderId, ShaderProgram, VertexShader, Fragme
 
 use std::thread::yield_now;
 use std::collections::HashMap;
-use std::ffi::c_void;
 
 pub struct WindowManager {
     window: PWindow,
@@ -15,7 +13,7 @@ pub struct WindowManager {
     sprites: HashMap<SpriteId, Sprite>,
     shaders: HashMap<ShaderId, ShaderProgram>,
     timer: Timer,
-    target_frame_time: f64,
+    target_frame_time: f32,
     show_fps: bool,
     last_sprite_id: u64,
 }
@@ -30,7 +28,7 @@ impl WindowManager {
 
         shaders.insert(shader, default_shader);
 
-        WindowManager{
+        let mut manager = WindowManager{
             window,
             sprite_sheets: HashMap::new(),
             sprites: HashMap::new(),
@@ -39,7 +37,10 @@ impl WindowManager {
             target_frame_time: 1.0 / 60.0,
             show_fps: false,
             last_sprite_id: 0,
-        }
+
+        };
+        manager.add_sprite_sheet();
+        manager
     }
 
     pub fn add_sprite_sheet(
@@ -109,7 +110,7 @@ impl WindowManager {
         }
     }
 
-    pub fn set_fps(&mut self, fps: f64) {
+    pub fn set_fps(&mut self, fps: f32) {
         self.target_frame_time = 1.0 / fps;
     }
 

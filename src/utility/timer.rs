@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 pub struct Timer {
     start_time: Instant,
@@ -19,7 +19,7 @@ impl Timer {
         (Instant::now() - self.start_time).as_millis()
     }
 
-    pub fn get_elapsed(&self) -> f64 {
-        (Instant::now() - self.start_time).as_secs_f64()
+    pub fn get_elapsed(&self) -> f32 {
+        (Instant::now() - self.start_time).as_secs_f32()
     }
 }
