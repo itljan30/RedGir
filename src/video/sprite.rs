@@ -1,4 +1,5 @@
 use crate::video::shader_manager::ShaderId;
+use crate::utility::file_parser;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Flip {
@@ -13,67 +14,64 @@ pub enum ImageType {
     PNG,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, Eq, Debug, Hash)]
 pub struct SpriteSheetId {
     id: u32,
 }
 
+impl SpriteSheetId {
+    pub fn new(id: u32) -> Self {
+        SpriteSheetId {
+            id,
+        }
+    }
+}
+
+impl PartialEq for SpriteSheetId {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 pub struct SpriteSheet {
-    image_type: ImageType,
-    source: String,
-    sheet_width: u32,
-    sheet_height: u32,
-    sprite_width: u32,
-    sprite_height: u32,
+    sprites_uv: Vec<(f32, f32, f32, f32)>,
+    texture_id: u32,
+    sheet_id: SpriteSheetId,
 }
 
 impl SpriteSheet {
-    pub fn new(
-        image_type: ImageType,
-        source: String, 
-        sprite_width: u32, 
-        sprite_height: u32
-    ) -> Self {
-        SpriteSheet {
-            image_type,
-            source,
-            sheet_width: 0,
-            sheet_height: 0,
-            sprite_width,
-            sprite_height,
+    pub fn from_png(png_path: &str, sprite_width: u32, sprite_height: u32) -> Self {
+        match file_parser::get_rbga_from_png(png_path) {
+            Ok((width, height, pixel_data)) => {
+                let sprites_uv = Vec::new();
+                // split sprites_uv properly using sprite dimensions and file dimensions
+                // send pixel data to openGL to get back texture_id
+                SpriteSheet {
+                    sprites_uv,
+                    sheet_id: SpriteSheetId::new(0),
+                    texture_id: 0,
+                }
+            },
+            Err(e) => panic!("{}", e)
         }
     }
 
-    pub fn from_image(source: String) -> Self {
-        todo!()
-    }
-}
-
-pub struct Texture {
-    image_type: ImageType,
-    texture_source: SpriteSheet,
-    width: u32,
-    height: u32,
-}
-
-impl Texture {
-    pub fn from_image(image_type: ImageType, texture_source: String, width: u32, height: u32) -> Self {
-        Texture {
-            image_type,
-            texture_source: SpriteSheet::from_image(texture_source),
-            width,
-            height,
-        }
+    pub fn from_jpeg(jpeg_path: &str, sprite_width: u32, sprite_height: u32) -> SpriteSheet {
+        todo!("Cannot import sprites from jpeg yet")
     }
 
-    pub fn from_sprite_sheet(sprite_sheet: &SpriteSheetId, index: u32) -> Self {
-        todo!();
+    pub fn set_id(&mut self, id: u32) {
+        self.sheet_id = SpriteSheetId::new(id);
+    }
+
+    pub fn get_id(&self) -> SpriteSheetId {
+        self.sheet_id
     }
 }
 
 #[derive(Clone, Copy, Eq, Debug, Hash)]
 pub struct SpriteId {
-    id: u64,
+    id: u32,
 }
 
 impl PartialEq for SpriteId {
@@ -83,25 +81,21 @@ impl PartialEq for SpriteId {
 }
 
 impl SpriteId {
-    fn new(id: u64) -> Self {
+    fn new(id: u32) -> Self {
         SpriteId {
             id,
         }
     }
 }
 
-/**
- * Sprites are rectangles with a texture
- * x: i32, and y: i32 are the top left pixel of the sprite
- *  
- */
 pub struct Sprite {
-    texture: Texture,
+    sprite_sheet: SpriteSheetId,
+    sprite_sheet_index: usize,
+    sprite_id: SpriteId,
     x_position: i32,
     y_position: i32,
-    sprite_id: SpriteId,
-    scale_x: f32,
-    scale_y: f32,
+    width: f32,
+    height: f32,
     rotation: f32,
     flip: Flip,
     shader: Option<ShaderId>,
@@ -109,38 +103,24 @@ pub struct Sprite {
 
 impl Sprite {
     pub fn new(
-        texture: Texture, 
+        sprite_sheet: &SpriteSheetId,
+        sprite_sheet_index: usize,
+        width: u32,
+        height: u32,
         shader: Option<ShaderId>
         ) -> Self {
-
         Sprite {
             x_position: 0,
+            sprite_sheet: sprite_sheet.clone(),
+            sprite_sheet_index,
             y_position: 0,
-            texture,
+            width: width as f32,
+            height: height as f32,
             sprite_id: SpriteId::new(0),
             rotation: 0.0,
-            scale_x: 0.0,
-            scale_y: 0.0,
             flip: Flip::None,
             shader,
         }
-    }
-
-    pub fn from_sprite_sheet(
-        sprite_sheet: SpriteSheet,
-        index: u32,
-        shader: Option<ShaderId>,
-    ) {
-        // Sprite {
-        //     todo!("Add a way to get texture from spritesheet")
-        //     x_position: 0,
-        //     y_position: 0,
-        //     shader,
-        //     rotation: 0.0,
-        //     scale: 0.0,
-        //     flip: Flip::None,
-        //     sprite_id: SpriteId::new(0),
-        // }
     }
 
     pub fn get_position(&self) -> (&i32, &i32) {
@@ -157,7 +137,7 @@ impl Sprite {
         self.sprite_id.clone()
     }
 
-    pub fn set_id(&mut self, id: u64) {
+    pub fn set_id(&mut self, id: u32) {
         self.sprite_id = SpriteId::new(id);
     }
 
@@ -166,8 +146,19 @@ impl Sprite {
         self
     }
 
-    pub fn set_texture(&mut self, texture: Texture) -> &mut Self {
-        self.texture = texture;
+    pub fn set_texture(&mut self, sprite_sheet: SpriteSheetId, sprite_sheet_index: usize) -> &mut Self {
+        self.sprite_sheet = sprite_sheet;
+        self.sprite_sheet_index = sprite_sheet_index;
+        self
+    }
+
+    pub fn set_height(&mut self, height: u32) -> &mut Self {
+        self.height = height as f32;
+        self
+    }
+
+    pub fn set_width(&mut self, width: u32) -> &mut Self {
+        self.width = width as f32;
         self
     }
 
@@ -178,8 +169,8 @@ impl Sprite {
     }
 
     pub fn set_scale(&mut self, scale_x: f32, scale_y: f32) -> &mut Self {
-        self.scale_x = scale_x;
-        self.scale_y = scale_y;
+        self.width *= scale_x;
+        self.height *= scale_y;
         self
     }
 

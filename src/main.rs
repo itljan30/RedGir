@@ -7,14 +7,30 @@ pub mod utility;
 use engine::Engine;
 use input::input_manager::{Key, Action};
 use video::color::Color;
-use video::sprite::{Sprite, Texture, ImageType, Flip};
+use video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId};
 
-fn get_triangle() -> Vec<[f32; 3]> {
-    vec![
-        [0.0,  0.5, 1.0],
-        [-0.5, -0.5, 1.0],
-        [0.5, -0.5, 1.0],
-    ]
+fn draw_text(
+    engine: &mut Engine,
+    sprite_sheet: &SpriteSheetId,
+    text: &str, x: usize, y: usize, size: usize
+) -> Vec<SpriteId> {
+    let mut chars = Vec::new();
+    for (i, c) in text.chars().enumerate() {
+        chars.push(engine.add_sprite(Sprite::new(
+            sprite_sheet,
+            c as usize - 32,
+            (x + (i * size)) as u32,
+            (y + (i * size)) as u32, 
+            None
+        )))
+    }
+    chars
+}
+
+fn remove_sprites(engine: &mut Engine, sprites: &Vec<SpriteId>) {
+    for sprite in sprites.iter() {
+        engine.remove_sprite(sprite);
+    }
 }
 
 fn main() {
@@ -26,19 +42,8 @@ fn main() {
         false, false, false,
     );
 
-    let sprite_sheet_id = engine.add_sprite_sheet(ImageType::PNG, "../sprite_sheet.png".to_string(), 10, 10);
-
-    let enemy = engine.add_sprite(
-        Sprite::new(Texture::from_sprite_sheet(&sprite_sheet_id, 3), None)
-    );
-
-    engine.get_sprite(&enemy).unwrap()
-        .translate(10, 10)
-        .set_flip(Flip::FlipX)
-        .set_scale(1.0, 3.0)
-        .set_texture(Texture::from_sprite_sheet(&sprite_sheet_id, 4))
-        .set_shader(None)
-        .set_rotation(3.5);
+    let text_sheet = engine.add_sprite_sheet(SpriteSheet::from_png("assets/font.png", 16, 16));
+    let text = draw_text(&mut engine, &text_sheet, "hello", 0, 0, 32);
 
     while engine.is_running() {
         let events = engine.get_key_events();
@@ -47,6 +52,7 @@ fn main() {
             match (key, action) {
                 (Key::F5, Action::Pressed) => engine.toggle_show_fps(),
                 (Key::Escape, Action::Pressed) => engine.stop(),
+                (Key::Enter, Action::Pressed) => remove_sprites(&mut engine, &text),
                 _ => {},
             }
         }

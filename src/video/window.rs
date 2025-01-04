@@ -1,7 +1,7 @@
 use glfw::{Context, PWindow};
 
 use crate::utility::timer::Timer;
-use crate::video::sprite::{Sprite, SpriteId, SpriteSheetId, SpriteSheet, ImageType};
+use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId};
 use crate::video::shader_manager::{ShaderId, ShaderProgram, VertexShader, FragmentShader};
 
 use std::thread::yield_now;
@@ -15,7 +15,8 @@ pub struct WindowManager {
     timer: Timer,
     target_frame_time: f32,
     show_fps: bool,
-    last_sprite_id: u64,
+    last_sprite_id: u32,
+    last_sheet_id: u32,
 }
 
 impl WindowManager {
@@ -28,7 +29,7 @@ impl WindowManager {
 
         shaders.insert(shader, default_shader);
 
-        let mut manager = WindowManager{
+        WindowManager{
             window,
             sprite_sheets: HashMap::new(),
             sprites: HashMap::new(),
@@ -37,20 +38,21 @@ impl WindowManager {
             target_frame_time: 1.0 / 60.0,
             show_fps: false,
             last_sprite_id: 0,
+            last_sheet_id: 0,
 
-        };
-        manager.add_sprite_sheet();
-        manager
+        }
     }
 
-    pub fn add_sprite_sheet(
-        &mut self,
-        image_type: ImageType,
-        source: String,
-        sprite_width: u32, 
-        sprite_height: u32
-    ) -> SpriteSheetId {
-        todo!()
+    pub fn is_running(&self) -> bool {
+        return !self.window.should_close();
+    }
+
+    pub fn add_sprite_sheet(&mut self, mut sprite_sheet: SpriteSheet) -> SpriteSheetId {
+        sprite_sheet.set_id(self.last_sprite_id);
+        self.last_sheet_id += 1;
+        let sheet_id = sprite_sheet.get_id();
+        self.sprite_sheets.insert(sheet_id.clone(), sprite_sheet);
+        sheet_id
     }
 
     pub fn get_sprite(&mut self, id: &SpriteId) -> Option<&mut Sprite> {
@@ -131,17 +133,12 @@ impl WindowManager {
         self.window.swap_buffers();
     }
 
-    // TODO just add gl error reporting so that I can figure what is going on
     // to use custom shaders I should make it so that it sorts the sprites by shader and then
     // creates a separate vao for each shader used, then send them in separately
     pub unsafe fn draw_frame(&mut self) {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
         self.swap_buffers();
-    }
-
-    pub fn is_running(&self) -> bool {
-        return !self.window.should_close();
     }
 }
 
