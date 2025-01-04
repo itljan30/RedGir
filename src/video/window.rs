@@ -1,4 +1,5 @@
 use glfw::{Context, PWindow};
+use gl::types::{GLuint, GLint};
 
 use crate::utility::timer::Timer;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId};
@@ -17,6 +18,8 @@ pub struct WindowManager {
     show_fps: bool,
     last_sprite_id: u32,
     last_sheet_id: u32,
+    vao: GLuint,
+    vbo: GLuint,
 }
 
 impl WindowManager {
@@ -29,6 +32,13 @@ impl WindowManager {
 
         shaders.insert(shader, default_shader);
 
+        let mut vao: GLuint = 0;
+        let mut vbo: GLuint = 0;
+        unsafe {
+            gl::GenVertexArrays(1, &mut vao);
+            gl::GenBuffers(1, &mut vbo);
+        }
+
         WindowManager{
             window,
             sprite_sheets: HashMap::new(),
@@ -39,7 +49,8 @@ impl WindowManager {
             show_fps: false,
             last_sprite_id: 0,
             last_sheet_id: 0,
-
+            vao,
+            vbo,
         }
     }
 
@@ -134,14 +145,15 @@ impl WindowManager {
     }
 
     // to use custom shaders I should make it so that it sorts the sprites by shader and then
-    // creates a separate vao for each shader used, then send them in separately
+    // creates a separate vao for each shader used to batch efficiently
     pub unsafe fn draw_frame(&mut self) {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
+        for sprite in self.sprites.values() {
+            gl::BindVertexArray(self.vao);
+            todo!()
+        }
+
         self.swap_buffers();
     }
-}
-
-unsafe fn add_vbo_from_sprite(sprite: &Sprite) {
-    todo!()
 }
