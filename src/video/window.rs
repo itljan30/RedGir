@@ -1,9 +1,11 @@
 use glfw::{Context, PWindow};
-use gl::types::{GLuint, GLint};
+use gl::types::GLuint;
 
 use crate::utility::timer::Timer;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId};
-use crate::video::shader_manager::{ShaderId, ShaderProgram, VertexShader, FragmentShader};
+use crate::video::shader_manager::{
+    ShaderType, ShaderError, Shader, ShaderId, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
+};
 
 use std::thread::yield_now;
 use std::collections::HashMap;
@@ -13,6 +15,7 @@ pub struct WindowManager {
     sprite_sheets: HashMap<SpriteSheetId, SpriteSheet>,
     sprites: HashMap<SpriteId, Sprite>,
     shaders: HashMap<ShaderId, ShaderProgram>,
+    default_shader: ShaderId,
     timer: Timer,
     target_frame_time: f32,
     show_fps: bool,
@@ -22,15 +25,45 @@ pub struct WindowManager {
     vbo: GLuint,
 }
 
+impl Drop for WindowManager {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteBuffers(1, &self.vbo);
+            gl::DeleteVertexArrays(1, &self.vao);
+        }
+    }
+}
+
 impl WindowManager {
     pub fn new(window: PWindow) -> Self {
         let mut shaders = HashMap::new();
+        
+        let default_shaders = [
+            Shader::new(DEFAULT_VERTEX_SHADER, ShaderType::VertexShader),
+            Shader::new(DEFAULT_FRAGMENT_SHADER, ShaderType::FragmentShader),
+        ];
 
-        let mut default_shader = ShaderProgram::default();
-        default_shader.compile_and_link();
-        let shader = ShaderId::new(default_shader.id);
+        let mut shader: Vec<Shader> = Vec::new();
 
-        shaders.insert(shader, default_shader);
+        for shader_result in default_shaders.into_iter() {
+            match shader_result {
+                Ok(s) => shader.push(s),
+                Err(e) => eprintln!("Error: Failed to create default shader: {}", e),
+            }
+        }
+
+        let mut shader_id: ShaderId = ShaderId::new(0);
+
+        if shader.len() == 2 {
+            let default_shader_program = ShaderProgram::new(&shader);
+            match default_shader_program {
+                Ok(program) => {
+                    shader_id = ShaderId::new(program.id);
+                    shaders.insert(shader_id, program);
+                }
+                Err(e) => eprintln!("Error: Failed to link default shader program: {}", e),
+            }
+        }
 
         let mut vao: GLuint = 0;
         let mut vbo: GLuint = 0;
@@ -44,6 +77,7 @@ impl WindowManager {
             sprite_sheets: HashMap::new(),
             sprites: HashMap::new(),
             shaders,
+            default_shader: shader_id,
             timer: Timer::new(),
             target_frame_time: 1.0 / 60.0,
             show_fps: false,
@@ -70,12 +104,11 @@ impl WindowManager {
         self.sprites.get_mut(id)
     }
 
-    pub fn add_shader(&mut self, vertex_shader: VertexShader, fragment_shader: FragmentShader) -> ShaderId {
-        let mut shader = ShaderProgram::new(vertex_shader, fragment_shader);
-        shader.compile_and_link();
-        let id = ShaderId::new(shader.id);
-        self.shaders.insert(id.clone(), shader);
-        id
+    pub fn add_shader_program(&mut self, shaders: &[Shader]) -> Result<ShaderId, ShaderError> {
+        let program = ShaderProgram::new(shaders)?;
+        let shader_id = ShaderId::new(program.id);
+        self.shaders.insert(shader_id, program);
+        Ok(shader_id)
     }
 
     pub fn get_all_sprites(&self) -> &HashMap<SpriteId, Sprite> {
@@ -151,7 +184,30 @@ impl WindowManager {
 
         for sprite in self.sprites.values() {
             gl::BindVertexArray(self.vao);
-            todo!()
+
+            let (screen_width, screen_height) = self.window.get_framebuffer_size();
+            let vertices = sprite.get_vertices();
+
+            let mut normalized_vertices: [f32; 12] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+            for i in 0..6 {
+                normalized_vertices[2 * i] = 2.0 * (vertices[2 * i] as f32 / screen_width as f32) - 1.0;
+                normalized_vertices[2 * i + 1] = 2.0 * (vertices[2 * i + 1] as f32 / screen_height as f32) - 1.0;
+            }
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER, 
+                (size_of::<f32>() * 12) as isize,
+                normalized_vertices.as_ptr() as *const _,
+                gl::DYNAMIC_DRAW
+            );
+
+            gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, (2 * size_of::<f32>()) as i32, std::ptr::null());
+            gl::EnableVertexAttribArray(0);
+
+            self.shaders.get(&self.default_shader).unwrap().use_program();
+
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
         }
 
         self.swap_buffers();

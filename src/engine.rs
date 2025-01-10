@@ -3,15 +3,16 @@ use crate::input::input_manager::{InputManager, Key, Action};
 use crate::video::window::WindowManager;
 use crate::video::color::Color;
 use crate::video::sprite::{SpriteSheetId, Sprite, SpriteId, SpriteSheet};
-use crate::video::shader_manager::{ShaderId, FragmentShader, VertexShader};
+use crate::video::shader_manager::{ShaderId, Shader, ShaderError};
 use crate::video::glfw_window::GlfwWindow;
 
 use std::collections::HashMap;
 
 pub struct Engine {
-    audio_manager: AudioManager,
-    input_manager: InputManager,
+    // NOTE window is first so that all openGL things get dropped before the glfw context
     window: WindowManager,
+    input_manager: InputManager,
+    audio_manager: AudioManager,
 }
 
 impl Default for Engine {
@@ -19,9 +20,9 @@ impl Default for Engine {
         let window = GlfwWindow::default();
 
         Engine {
+            window: WindowManager::new(window.window),
             audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
-            window: WindowManager::new(window.window),
         }
     }
 }
@@ -64,8 +65,8 @@ impl Engine {
         self.window.add_sprite_sheet(sprite_sheet)
     }
 
-    pub fn add_shader(&mut self, vertex_shader: VertexShader, fragment_shader: FragmentShader) -> ShaderId {
-        self.window.add_shader(vertex_shader, fragment_shader)
+    pub fn add_shader_group(&mut self, shaders: &[Shader]) -> Result<ShaderId, ShaderError> {
+        self.window.add_shader_program(shaders)
     }
 
     pub fn get_sprite(&mut self, id: &SpriteId) -> Option<&mut Sprite> {

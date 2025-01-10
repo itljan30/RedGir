@@ -1,6 +1,8 @@
 use crate::video::shader_manager::ShaderId;
 use crate::utility::file_parser;
 
+use gl::types::GLuint;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Flip {
     None,
@@ -34,8 +36,8 @@ impl PartialEq for SpriteSheetId {
 }
 
 pub struct SpriteSheet {
-    sprites_uv: Vec<(f32, f32, f32, f32)>,
-    texture_id: u32,
+    pub sprites_uv: Vec<(f32, f32, f32, f32)>,
+    pub texture_id: u32,
     sheet_id: SpriteSheetId,
 }
 
@@ -43,13 +45,46 @@ impl SpriteSheet {
     pub fn from_png(png_path: &str, sprite_width: u32, sprite_height: u32) -> Self {
         match file_parser::get_rbga_from_png(png_path) {
             Ok((width, height, pixel_data)) => {
-                let sprites_uv = Vec::new();
-                // split sprites_uv properly using sprite dimensions and file dimensions
-                // send pixel data to openGL to get back texture_id
+                let mut sprites_uv = Vec::new();
+
+                for row in 0..(height / sprite_height) {
+                    for col in 0..(width / sprite_width) {
+                        let u_min = col as f32 * sprite_width as f32 / width as f32;
+                        let v_min = row as f32 * sprite_height as f32 / height as f32;
+                        let u_max = (col + 1) as f32 * sprite_width as f32 / width as f32;
+                        let v_max = (row + 1) as f32 * sprite_height as f32 / height as f32;
+
+                        sprites_uv.push((u_min, v_min, u_max, v_max));
+                    }
+                }
+
+                let mut texture_id: GLuint = 0;
+
+                unsafe {
+                    gl::GenTextures(1, &mut texture_id);
+                    gl::BindTexture(gl::TEXTURE_2D, texture_id);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32); // Wrap x-axis
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32); // Wrap y-axis
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32); // Minification filter
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32); // Magnification filter
+
+                    gl::TexImage2D(
+                        gl::TEXTURE_2D,
+                        0, // Level of detail (0 is the base level)
+                        gl::RGBA as i32, // Internal format
+                        width as i32,
+                        height as i32,
+                        0, // Border
+                        gl::RGBA, // Format of the pixel data
+                        gl::UNSIGNED_BYTE, // Data type of the pixel data
+                        pixel_data.as_ptr() as *const _, // Pointer to the pixel data
+                    );
+                }
+
                 SpriteSheet {
                     sprites_uv,
                     sheet_id: SpriteSheetId::new(0),
-                    texture_id: 0,
+                    texture_id,
                 }
             },
             Err(e) => panic!("{}", e)
@@ -89,16 +124,16 @@ impl SpriteId {
 }
 
 pub struct Sprite {
-    sprite_sheet: SpriteSheetId,
-    sprite_sheet_index: usize,
-    sprite_id: SpriteId,
-    x_position: i32,
-    y_position: i32,
-    width: f32,
-    height: f32,
-    rotation: f32,
-    flip: Flip,
-    shader: Option<ShaderId>,
+    pub sprite_sheet: SpriteSheetId,
+    pub sprite_sheet_index: usize,
+    pub sprite_id: SpriteId,
+    pub x_position: i32,
+    pub y_position: i32,
+    pub width: f32,
+    pub height: f32,
+    pub rotation: f32,
+    pub flip: Flip,
+    pub shader: Option<ShaderId>,
 }
 
 impl Sprite {
@@ -108,7 +143,7 @@ impl Sprite {
         width: u32,
         height: u32,
         shader: Option<ShaderId>
-        ) -> Self {
+    ) -> Self {
         Sprite {
             x_position: 0,
             sprite_sheet: sprite_sheet.clone(),
@@ -122,6 +157,17 @@ impl Sprite {
             shader,
         }
     }
+
+    pub fn get_vertices(&self) -> [i32; 12] {
+    [   
+        self.x_position, self.y_position,
+        self.x_position + self.width as i32, self.y_position,
+        self.x_position, self.y_position + self.height as i32,
+
+        self.x_position + self.width as i32, self.y_position,
+        self.x_position, self.y_position + self.height as i32,
+        self.x_position + self.width as i32, self.y_position + self.height as i32
+    ]}
 
     pub fn get_position(&self) -> (&i32, &i32) {
         (&self.x_position, &self.y_position)
