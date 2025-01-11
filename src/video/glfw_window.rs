@@ -62,7 +62,7 @@ impl GlfwWindow {
         window.set_framebuffer_size_polling(true);
         window.set_framebuffer_size_callback(|_, width, height| {
             unsafe {
-                gl::Viewport(0, 0, width as i32, height as i32);
+                gl::Viewport(0, 0, width, height);
             }
         });
 

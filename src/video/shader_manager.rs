@@ -129,7 +129,7 @@ impl Shader {
 }
 
 pub struct ShaderProgram {
-    pub id: GLuint,
+    id: GLuint,
 }
 
 impl Drop for ShaderProgram {
@@ -137,6 +137,12 @@ impl Drop for ShaderProgram {
         unsafe {
             gl::DeleteProgram(self.id);
         }
+    }
+}
+
+impl ShaderProgram {
+    pub fn get_id(&self) -> GLuint {
+        self.id
     }
 }
 

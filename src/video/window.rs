@@ -2,7 +2,8 @@ use glfw::{Context, PWindow};
 use gl::types::GLuint;
 
 use crate::utility::timer::Timer;
-use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId};
+use crate::video::color::Color;
+use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, ImageType};
 use crate::video::shader_manager::{
     ShaderType, ShaderError, Shader, ShaderId, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
 };
@@ -58,7 +59,7 @@ impl WindowManager {
             let default_shader_program = ShaderProgram::new(&shader);
             match default_shader_program {
                 Ok(program) => {
-                    shader_id = ShaderId::new(program.id);
+                    shader_id = ShaderId::new(program.get_id());
                     shaders.insert(shader_id, program);
                 }
                 Err(e) => eprintln!("Error: Failed to link default shader program: {}", e),
@@ -88,11 +89,20 @@ impl WindowManager {
         }
     }
 
+    pub fn get_dimensions(&self) -> (i32, i32) {
+        self.window.get_framebuffer_size()
+    }
+
     pub fn is_running(&self) -> bool {
         return !self.window.should_close();
     }
 
-    pub fn add_sprite_sheet(&mut self, mut sprite_sheet: SpriteSheet) -> SpriteSheetId {
+    pub fn add_sprite_sheet(&mut self, image_type: ImageType, sprite_width: u32, sprite_height: u32) -> SpriteSheetId {
+        let mut sprite_sheet = match image_type {
+            ImageType::PNG(path) => SpriteSheet::from_png(path, sprite_width, sprite_height),
+            ImageType::JPEG(path) => SpriteSheet::from_jpeg(path, sprite_width, sprite_height),
+        };
+
         sprite_sheet.set_id(self.last_sprite_id);
         self.last_sheet_id += 1;
         let sheet_id = sprite_sheet.get_id();
@@ -100,13 +110,13 @@ impl WindowManager {
         sheet_id
     }
 
-    pub fn get_sprite(&mut self, id: &SpriteId) -> Option<&mut Sprite> {
-        self.sprites.get_mut(id)
+    pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
+        self.sprites.get_mut(&id)
     }
 
     pub fn add_shader_program(&mut self, shaders: &[Shader]) -> Result<ShaderId, ShaderError> {
         let program = ShaderProgram::new(shaders)?;
-        let shader_id = ShaderId::new(program.id);
+        let shader_id = ShaderId::new(program.get_id());
         self.shaders.insert(shader_id, program);
         Ok(shader_id)
     }
@@ -115,7 +125,17 @@ impl WindowManager {
         &self.sprites
     }
 
-    pub fn add_sprite(&mut self, mut sprite: Sprite) -> SpriteId {
+    pub fn add_sprite(
+        &mut self, 
+        sprite_sheet: Option<SpriteSheetId>, 
+        sprite_index: Option<usize>,
+        x_position: i32, y_position: i32,
+        layer: i32, width: u32, height: u32,
+        color: Option<Color>,
+        shader: Option<ShaderId>,
+    ) -> SpriteId {
+        let mut sprite = Sprite::new(sprite_sheet, sprite_index, x_position, y_position, layer, width, height, color, shader);
+
         sprite.set_id(self.last_sprite_id);
         self.last_sprite_id += 1;
         let sprite_id = sprite.get_id();
@@ -182,7 +202,11 @@ impl WindowManager {
     pub unsafe fn draw_frame(&mut self) {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
-        for sprite in self.sprites.values() {
+        let mut sprites: Vec<&Sprite> = self.sprites.values().collect();
+
+        sprites.sort_by_key(|sprite| sprite.get_layer());
+
+        for sprite in sprites {
             gl::BindVertexArray(self.vao);
 
             let (screen_width, screen_height) = self.window.get_framebuffer_size();

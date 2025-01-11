@@ -1,4 +1,5 @@
 use crate::video::shader_manager::ShaderId;
+use crate::video::color::Color;
 use crate::utility::file_parser;
 
 use gl::types::GLuint;
@@ -11,9 +12,9 @@ pub enum Flip {
     FlipXY,
 }
 
-pub enum ImageType {
-    JPEG,
-    PNG,
+pub enum ImageType<'a> {
+    JPEG(&'a str),
+    PNG(&'a str),
 }
 
 #[derive(Clone, Copy, Eq, Debug, Hash)]
@@ -36,12 +37,20 @@ impl PartialEq for SpriteSheetId {
 }
 
 pub struct SpriteSheet {
-    pub sprites_uv: Vec<(f32, f32, f32, f32)>,
-    pub texture_id: u32,
+    sprites_uv: Vec<(f32, f32, f32, f32)>,
+    texture_id: u32,
     sheet_id: SpriteSheetId,
 }
 
 impl SpriteSheet {
+    pub fn get_uv(&self, index: usize) -> (f32, f32, f32, f32) {
+        self.sprites_uv[index]
+    }
+
+    pub fn get_texture(&self) -> u32 {
+        self.texture_id
+    }
+    
     pub fn from_png(png_path: &str, sprite_width: u32, sprite_height: u32) -> Self {
         match file_parser::get_rbga_from_png(png_path) {
             Ok((width, height, pixel_data)) => {
@@ -63,21 +72,21 @@ impl SpriteSheet {
                 unsafe {
                     gl::GenTextures(1, &mut texture_id);
                     gl::BindTexture(gl::TEXTURE_2D, texture_id);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32); // Wrap x-axis
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32); // Wrap y-axis
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32); // Minification filter
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32); // Magnification filter
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
                     gl::TexImage2D(
                         gl::TEXTURE_2D,
-                        0, // Level of detail (0 is the base level)
-                        gl::RGBA as i32, // Internal format
+                        0,
+                        gl::RGBA as i32,
                         width as i32,
                         height as i32,
-                        0, // Border
-                        gl::RGBA, // Format of the pixel data
-                        gl::UNSIGNED_BYTE, // Data type of the pixel data
-                        pixel_data.as_ptr() as *const _, // Pointer to the pixel data
+                        0,
+                        gl::RGBA,
+                        gl::UNSIGNED_BYTE,
+                        pixel_data.as_ptr() as *const _,
                     );
                 }
 
@@ -91,7 +100,7 @@ impl SpriteSheet {
         }
     }
 
-    pub fn from_jpeg(jpeg_path: &str, sprite_width: u32, sprite_height: u32) -> SpriteSheet {
+    pub fn from_jpeg(_jpeg_path: &str, _sprite_width: u32, _sprite_height: u32) -> SpriteSheet {
         todo!("Cannot import sprites from jpeg yet")
     }
 
@@ -124,36 +133,44 @@ impl SpriteId {
 }
 
 pub struct Sprite {
-    pub sprite_sheet: SpriteSheetId,
-    pub sprite_sheet_index: usize,
-    pub sprite_id: SpriteId,
-    pub x_position: i32,
-    pub y_position: i32,
-    pub width: f32,
-    pub height: f32,
-    pub rotation: f32,
-    pub flip: Flip,
-    pub shader: Option<ShaderId>,
+    sprite_id: SpriteId,
+    x_position: i32,
+    y_position: i32,
+    width: f32,
+    height: f32,
+    layer: i32,
+    rotation: f32,
+    flip: Flip,
+    sprite_sheet: Option<SpriteSheetId>,
+    sprite_sheet_index: Option<usize>,
+    color: Option<Color>,
+    shader: Option<ShaderId>,
 }
 
 impl Sprite {
     pub fn new(
-        sprite_sheet: &SpriteSheetId,
-        sprite_sheet_index: usize,
+        sprite_sheet: Option<SpriteSheetId>,
+        sprite_sheet_index: Option<usize>,
+        x_position: i32,
+        y_position: i32,
+        layer: i32,
         width: u32,
         height: u32,
-        shader: Option<ShaderId>
+        color: Option<Color>,
+        shader: Option<ShaderId>,
     ) -> Self {
         Sprite {
-            x_position: 0,
-            sprite_sheet: sprite_sheet.clone(),
+            sprite_sheet,
             sprite_sheet_index,
-            y_position: 0,
+            x_position,
+            y_position,
+            layer,
             width: width as f32,
             height: height as f32,
             sprite_id: SpriteId::new(0),
             rotation: 0.0,
             flip: Flip::None,
+            color,
             shader,
         }
     }
@@ -193,8 +210,8 @@ impl Sprite {
     }
 
     pub fn set_texture(&mut self, sprite_sheet: SpriteSheetId, sprite_sheet_index: usize) -> &mut Self {
-        self.sprite_sheet = sprite_sheet;
-        self.sprite_sheet_index = sprite_sheet_index;
+        self.sprite_sheet = Some(sprite_sheet);
+        self.sprite_sheet_index = Some(sprite_sheet_index);
         self
     }
 
@@ -228,5 +245,17 @@ impl Sprite {
     pub fn set_flip(&mut self, flip: Flip) -> &mut Self {
         self.flip = flip;
         self
+    }
+    
+    pub fn get_layer(&self) -> i32 {
+        self.layer
+    }
+
+    pub fn get_height(&self) -> u32 {
+        self.height as u32
+    }
+
+    pub fn get_width(&self) -> u32 {
+        self.width as u32
     }
 }
