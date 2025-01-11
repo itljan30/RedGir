@@ -8,6 +8,81 @@ use crate::video::glfw_window::GlfwWindow;
 
 use std::collections::HashMap;
 
+pub struct EngineBuilder {
+    window_name: Option<String>,
+    width: u32,
+    height: u32,
+    clear_color: Color,
+    show_cursor: bool,
+    is_bordered: bool,
+    is_resizable: bool,
+    should_poll_keys: bool,
+    should_poll_cursor_pos: bool,
+    should_poll_mouse_buttons: bool,
+    should_poll_scroll: bool,
+}
+
+impl EngineBuilder {
+    pub fn init(&mut self) -> Engine {
+        Engine::build(
+            self.width, self.height,
+            self.clear_color, 
+            self.window_name.clone().unwrap_or("Window".to_string()).as_str(),
+            self.show_cursor,
+            self.is_bordered, self.is_resizable,
+            self.should_poll_keys, self.should_poll_cursor_pos,
+            self.should_poll_mouse_buttons, self.should_poll_scroll
+        )
+    }
+
+    pub fn hide_cursor(&mut self) -> &mut Self {
+        self.show_cursor = false;
+        self
+    }
+
+    pub fn borderless(&mut self) -> &mut Self {
+        self.is_bordered = false;
+        self
+    }
+
+    pub fn not_resizable(&mut self) -> &mut Self {
+        self.is_resizable = false;
+        self
+    }
+
+    pub fn poll_mouse_buttons(&mut self) -> &mut Self {
+        self.should_poll_mouse_buttons = true;
+        self.should_poll_scroll = true;
+        self
+    }
+
+    pub fn poll_cursor(&mut self) -> &mut Self {
+        self.should_poll_cursor_pos = true;
+        self
+    }
+
+    pub fn poll_keyboard(&mut self) -> &mut Self {
+        self.should_poll_keys = true;
+        self
+    }
+
+    pub fn set_window_size(&mut self, width: u32, height: u32) -> &mut Self {
+        self.width = width;
+        self.height = height;
+        self
+    } 
+
+    pub fn set_clear_color(&mut self, color: Color) -> &mut Self {
+        self.clear_color = color;
+        self
+    }
+
+    pub fn set_window_name(&mut self, name: &str) -> &mut Self {
+        self.window_name = Some(name.to_string());
+        self
+    }
+}
+
 pub struct Engine {
     // NOTE window is first so that all openGL things get dropped before the glfw context
     window: WindowManager,
@@ -28,7 +103,23 @@ impl Default for Engine {
 }
 
 impl Engine {
-    pub fn new(
+    pub fn new() -> EngineBuilder {
+        EngineBuilder {
+            width: 800,
+            height: 600,
+            clear_color: Color::BLACK,
+            window_name: None,
+            show_cursor: true,
+            is_bordered: true,
+            is_resizable: true,
+            should_poll_keys: false,
+            should_poll_scroll: false,
+            should_poll_mouse_buttons: false,
+            should_poll_cursor_pos: false,
+        }
+    }
+
+    pub fn build(
         width: u32,
         height: u32,
         clear_color: Color,
