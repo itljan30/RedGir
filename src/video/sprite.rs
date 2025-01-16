@@ -19,11 +19,6 @@ pub enum Flip {
     FlipXY,
 }
 
-pub enum ImageType<'a> {
-    JPEG(&'a str),
-    PNG(&'a str),
-}
-
 #[derive(Clone, Copy, Eq, Debug, Hash)]
 pub struct SpriteSheetId {
     id: u32,
@@ -58,8 +53,8 @@ impl SpriteSheet {
         self.texture_id
     }
     
-    pub fn from_png(png_path: &str, sprite_width: u32, sprite_height: u32) -> Result<Self, SpriteSheetError> {
-        match file_parser::get_rbga_from_png(png_path) {
+    pub fn from_image(png_path: &str, sprite_width: u32, sprite_height: u32) -> Result<Self, SpriteSheetError> {
+        match file_parser::get_rbga_from_image(png_path) {
             Ok((width, height, pixel_data)) => {
                 if width % sprite_width != 0 || height % sprite_height != 0 {
                     return Err(SpriteSheetError::InvalidSpriteDimensions(
@@ -85,10 +80,10 @@ impl SpriteSheet {
                 unsafe {
                     gl::GenTextures(1, &mut texture_id);
                     gl::BindTexture(gl::TEXTURE_2D, texture_id);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
                     gl::TexImage2D(
                         gl::TEXTURE_2D,
@@ -103,7 +98,8 @@ impl SpriteSheet {
                     );
 
                     if gl::GetError() != gl::NO_ERROR {
-                        panic!("failed to create texture")
+                        println!("OpenGL Error: {}", gl::GetError());
+                        panic!("Failed to create texture");
                     }
                 }
 
@@ -115,10 +111,6 @@ impl SpriteSheet {
             },
             Err(e) => Err(SpriteSheetError::IOError(e))
         }
-    }
-
-    pub fn from_jpeg(_jpeg_path: &str, _sprite_width: u32, _sprite_height: u32) -> Result<SpriteSheet, SpriteSheetError> {
-        todo!("Cannot import sprites from jpeg yet")
     }
 
     pub fn set_id(&mut self, id: u32) {

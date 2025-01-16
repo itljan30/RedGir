@@ -3,7 +3,7 @@ use gl::types::GLuint;
 
 use crate::utility::timer::Timer;
 use crate::video::color::Color;
-use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError, ImageType};
+use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError};
 use crate::video::shader_manager::{
     ShaderType, ShaderError, Shader, ShaderId, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
 };
@@ -99,14 +99,11 @@ impl WindowManager {
 
     pub fn add_sprite_sheet(
         &mut self, 
-        image_type: ImageType,
+        path: &str,
         sprite_width: u32,
         sprite_height: u32
     ) -> Result<SpriteSheetId, SpriteSheetError> {
-        let mut sprite_sheet = match image_type {
-            ImageType::PNG(path) => SpriteSheet::from_png(path, sprite_width, sprite_height)?,
-            ImageType::JPEG(path) => SpriteSheet::from_jpeg(path, sprite_width, sprite_height)?,
-        };
+        let mut sprite_sheet = SpriteSheet::from_image(path, sprite_width, sprite_height)?;
         sprite_sheet.set_id(self.last_sprite_id);
         self.last_sheet_id += 1;
         let sheet_id = sprite_sheet.get_id();
@@ -138,7 +135,12 @@ impl WindowManager {
         color: Option<Color>,
         shader: Option<ShaderId>,
     ) -> SpriteId {
-        let mut sprite = Sprite::new(sprite_sheet, sprite_index, x_position, y_position, layer, width, height, color, shader);
+        let mut sprite = Sprite::new(
+            sprite_sheet, sprite_index, 
+            x_position, y_position, layer, 
+            width, height, 
+            color, shader
+        );
 
         sprite.set_id(self.last_sprite_id);
         self.last_sprite_id += 1;
@@ -211,6 +213,7 @@ impl WindowManager {
             let (u_min, v_min, u_max, v_max) = sheet.get_uv(index);
 
             let mut normalized_vertices: [f32; 24] = [0.0; 24];
+
             for i in 0..6 {
                 normalized_vertices[4 * i] = 2.0 * (vertices[2 * i] as f32 / width as f32) - 1.0;
                 normalized_vertices[4 * i + 1] = 2.0 * (vertices[2 * i + 1] as f32 / height as f32) - 1.0;
@@ -258,7 +261,7 @@ impl WindowManager {
                     2,
                     gl::FLOAT,
                     gl::FALSE,
-                    (2 * size_of::<f32>()) as i32,
+                    (4 * size_of::<f32>()) as i32,
                     (2 * size_of::<f32>()) as *const _
                 );
                 gl::EnableVertexAttribArray(1);
@@ -266,15 +269,16 @@ impl WindowManager {
                 let shader = self.shaders.get(&self.default_shader).unwrap();
                 shader.use_program();
 
-                let texture = self.sprite_sheets.get(&sprite.get_sprite_sheet().unwrap()).unwrap();
+                let texture = self.sprite_sheets.get(&sprite.get_sprite_sheet().unwrap()).unwrap().get_texture();
 
                 gl::ActiveTexture(gl::TEXTURE0);
-                gl::BindTexture(gl::TEXTURE_2D, texture.get_texture());
+                gl::BindTexture(gl::TEXTURE_2D, texture);
 
+                use std::ffi::CString;
 
-                let texture_location = gl::GetUniformLocation(shader.get_id(), "tex_sample".as_ptr() as *const i8);
+                let texture_name = CString::new("tex_sample").unwrap();
+                let texture_location = gl::GetUniformLocation(shader.get_id(), texture_name.as_ptr());
                 gl::Uniform1i(texture_location, 0);
-
 
                 gl::DrawArrays(gl::TRIANGLES, 0, 6);
             }

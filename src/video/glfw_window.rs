@@ -59,6 +59,11 @@ impl GlfwWindow {
 
         gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
+        unsafe {
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+        }
+
         window.set_framebuffer_size_polling(true);
         window.set_framebuffer_size_callback(|_, width, height| {
             unsafe {

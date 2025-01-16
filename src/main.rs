@@ -6,7 +6,7 @@ pub mod utility;
 
 use engine::Engine;
 use input::input_manager::{Key, Action};
-use video::sprite::{SpriteId, ImageType};
+use video::sprite::SpriteId;
 use video::color::Color;
 
 fn move_sprite(engine: &mut Engine, sprite_id: SpriteId, dx: i32, dy: i32, screen_width: i32, screen_height: i32) {
@@ -20,17 +20,18 @@ fn move_sprite(engine: &mut Engine, sprite_id: SpriteId, dx: i32, dy: i32, scree
 
 fn main() {
     let mut engine = Engine::new()
-        .set_window_size(1920, 1080)
-        .set_clear_color(Color::DARK_GRAY)
+        .set_window_size(1280, 720)
+        .set_clear_color(Color::WHITE)
         .set_window_name("My Game")
         .poll_keyboard()
-        .borderless()
+        // .borderless()
         .hide_cursor()
         .init();
 
-    let sheet_id = engine.add_sprite_sheet(ImageType::PNG("assets/font.png"), 16, 16);
+    // let sheet_id = engine.add_sprite_sheet("assets/rainbow.png", 2048, 2048);
+    let sheet_id = engine.add_sprite_sheet("assets/transparent_rainbow.png", 640, 360);
 
-    let sprite_id = engine.add_sprite(sheet_id.unwrap(), 0, 0, 0, 0, 100, 100, None);
+    let sprite_id = engine.add_sprite(sheet_id.unwrap(), 0, 0, 0, 0, 1280, 720, None);
 
     while engine.is_running() {
         let events = engine.get_key_events();
