@@ -4,6 +4,13 @@ use crate::utility::file_parser;
 
 use gl::types::GLuint;
 
+#[derive(Debug)]
+pub enum SpriteSheetError {
+    IOError(String),
+    TextureCreationError(String),
+    InvalidSpriteDimensions(String),
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub enum Flip {
     None,
@@ -51,9 +58,15 @@ impl SpriteSheet {
         self.texture_id
     }
     
-    pub fn from_png(png_path: &str, sprite_width: u32, sprite_height: u32) -> Self {
+    pub fn from_png(png_path: &str, sprite_width: u32, sprite_height: u32) -> Result<Self, SpriteSheetError> {
         match file_parser::get_rbga_from_png(png_path) {
             Ok((width, height, pixel_data)) => {
+                if width % sprite_width != 0 || height % sprite_height != 0 {
+                    return Err(SpriteSheetError::InvalidSpriteDimensions(
+                        format!("Error: {} was given invalid dimensions of {}, {}", png_path, sprite_width, sprite_height)
+                    ));
+                }
+
                 let mut sprites_uv = Vec::new();
 
                 for row in 0..(height / sprite_height) {
@@ -74,8 +87,8 @@ impl SpriteSheet {
                     gl::BindTexture(gl::TEXTURE_2D, texture_id);
                     gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
                     gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
 
                     gl::TexImage2D(
                         gl::TEXTURE_2D,
@@ -88,19 +101,23 @@ impl SpriteSheet {
                         gl::UNSIGNED_BYTE,
                         pixel_data.as_ptr() as *const _,
                     );
+
+                    if gl::GetError() != gl::NO_ERROR {
+                        panic!("failed to create texture")
+                    }
                 }
 
-                SpriteSheet {
+                Ok(SpriteSheet {
                     sprites_uv,
                     sheet_id: SpriteSheetId::new(0),
                     texture_id,
-                }
+                })
             },
-            Err(e) => panic!("{}", e)
+            Err(e) => Err(SpriteSheetError::IOError(e))
         }
     }
 
-    pub fn from_jpeg(_jpeg_path: &str, _sprite_width: u32, _sprite_height: u32) -> SpriteSheet {
+    pub fn from_jpeg(_jpeg_path: &str, _sprite_width: u32, _sprite_height: u32) -> Result<SpriteSheet, SpriteSheetError> {
         todo!("Cannot import sprites from jpeg yet")
     }
 
@@ -173,6 +190,14 @@ impl Sprite {
             color,
             shader,
         }
+    }
+
+    pub fn get_sprite_sheet_index(&self) -> Option<usize> {
+        self.sprite_sheet_index
+    }
+
+    pub fn get_sprite_sheet(&self) -> Option<SpriteSheetId> {
+        self.sprite_sheet
     }
 
     pub fn get_vertices(&self) -> [i32; 12] {

@@ -6,20 +6,28 @@ use std::string::FromUtf8Error;
 pub const DEFAULT_VERTEX_SHADER: &str = r#"
 #version 330 core
 
-layout (location = 0) in vec2 aPos;
+layout (location = 0) in vec2 position;
+layout (location = 1) in vec2 tex_coords;
+
+out vec2 frag_tex_coords;
 
 void main() {
-    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);
+    gl_Position = vec4(position, 0.0f, 1.0f);
+    frag_tex_coords = tex_coords;
 }
 "#;
 
 pub const DEFAULT_FRAGMENT_SHADER: &str = r#"
 #version 330 core
 
-out vec4 fragColor;
+in vec2 frag_tex_coords;
+
+uniform sampler2D tex_sample;
+
+out vec4 frag_color;
 
 void main() {
-    fragColor = vec4(0.5f, 1.0f, 0.2f, 1.0f);
+    frag_color = texture(tex_sample, frag_tex_coords);
 }
 "#;
 

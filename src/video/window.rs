@@ -3,7 +3,7 @@ use gl::types::GLuint;
 
 use crate::utility::timer::Timer;
 use crate::video::color::Color;
-use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, ImageType};
+use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError, ImageType};
 use crate::video::shader_manager::{
     ShaderType, ShaderError, Shader, ShaderId, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
 };
@@ -97,17 +97,21 @@ impl WindowManager {
         return !self.window.should_close();
     }
 
-    pub fn add_sprite_sheet(&mut self, image_type: ImageType, sprite_width: u32, sprite_height: u32) -> SpriteSheetId {
+    pub fn add_sprite_sheet(
+        &mut self, 
+        image_type: ImageType,
+        sprite_width: u32,
+        sprite_height: u32
+    ) -> Result<SpriteSheetId, SpriteSheetError> {
         let mut sprite_sheet = match image_type {
-            ImageType::PNG(path) => SpriteSheet::from_png(path, sprite_width, sprite_height),
-            ImageType::JPEG(path) => SpriteSheet::from_jpeg(path, sprite_width, sprite_height),
+            ImageType::PNG(path) => SpriteSheet::from_png(path, sprite_width, sprite_height)?,
+            ImageType::JPEG(path) => SpriteSheet::from_jpeg(path, sprite_width, sprite_height)?,
         };
-
         sprite_sheet.set_id(self.last_sprite_id);
         self.last_sheet_id += 1;
         let sheet_id = sprite_sheet.get_id();
         self.sprite_sheets.insert(sheet_id.clone(), sprite_sheet);
-        sheet_id
+        Ok(sheet_id)
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
@@ -197,6 +201,27 @@ impl WindowManager {
         self.window.swap_buffers();
     }
 
+    fn get_normalized_vertices(&self, sprite: &Sprite) -> Option<[f32; 24]> {
+        let (width, height) = self.window.get_framebuffer_size();
+        let vertices = sprite.get_vertices();
+        let sheet_id = sprite.get_sprite_sheet()?;
+        let index = sprite.get_sprite_sheet_index()?;
+
+        self.sprite_sheets.get(&sheet_id).map(|sheet| {
+            let (u_min, v_min, u_max, v_max) = sheet.get_uv(index);
+
+            let mut normalized_vertices: [f32; 24] = [0.0; 24];
+            for i in 0..6 {
+                normalized_vertices[4 * i] = 2.0 * (vertices[2 * i] as f32 / width as f32) - 1.0;
+                normalized_vertices[4 * i + 1] = 2.0 * (vertices[2 * i + 1] as f32 / height as f32) - 1.0;
+
+                normalized_vertices[4 * i + 2] = if i % 2 == 0 {u_min} else {u_max};
+                normalized_vertices[4 * i + 3] = if i < 3 {v_min} else {v_max};
+            }
+            normalized_vertices
+        })
+    }
+
     // to use custom shaders I should make it so that it sorts the sprites by shader and then
     // creates a separate vao for each shader used to batch efficiently
     pub unsafe fn draw_frame(&mut self) {
@@ -209,31 +234,52 @@ impl WindowManager {
         for sprite in sprites {
             gl::BindVertexArray(self.vao);
 
-            let (screen_width, screen_height) = self.window.get_framebuffer_size();
-            let vertices = sprite.get_vertices();
+            if let Some(vertices) = self.get_normalized_vertices(sprite) {
+                gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+                gl::BufferData(
+                    gl::ARRAY_BUFFER, 
+                    (size_of::<f32>() * 24) as isize,
+                    vertices.as_ptr() as *const _,
+                    gl::DYNAMIC_DRAW
+                );
 
-            let mut normalized_vertices: [f32; 12] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-            for i in 0..6 {
-                normalized_vertices[2 * i] = 2.0 * (vertices[2 * i] as f32 / screen_width as f32) - 1.0;
-                normalized_vertices[2 * i + 1] = 2.0 * (vertices[2 * i + 1] as f32 / screen_height as f32) - 1.0;
+                gl::VertexAttribPointer(
+                    0,
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (4 * size_of::<f32>()) as i32,
+                    std::ptr::null()
+                );
+                gl::EnableVertexAttribArray(0);
+
+                gl::VertexAttribPointer(
+                    1,
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (2 * size_of::<f32>()) as i32,
+                    (2 * size_of::<f32>()) as *const _
+                );
+                gl::EnableVertexAttribArray(1);
+
+                let shader = self.shaders.get(&self.default_shader).unwrap();
+                shader.use_program();
+
+                let texture = self.sprite_sheets.get(&sprite.get_sprite_sheet().unwrap()).unwrap();
+
+                gl::ActiveTexture(gl::TEXTURE0);
+                gl::BindTexture(gl::TEXTURE_2D, texture.get_texture());
+
+
+                let texture_location = gl::GetUniformLocation(shader.get_id(), "tex_sample".as_ptr() as *const i8);
+                gl::Uniform1i(texture_location, 0);
+
+
+                gl::DrawArrays(gl::TRIANGLES, 0, 6);
             }
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
-            gl::BufferData(
-                gl::ARRAY_BUFFER, 
-                (size_of::<f32>() * 12) as isize,
-                normalized_vertices.as_ptr() as *const _,
-                gl::DYNAMIC_DRAW
-            );
-
-            gl::VertexAttribPointer(0, 2, gl::FLOAT, gl::FALSE, (2 * size_of::<f32>()) as i32, std::ptr::null());
-            gl::EnableVertexAttribArray(0);
-
-            self.shaders.get(&self.default_shader).unwrap().use_program();
-
-            gl::DrawArrays(gl::TRIANGLES, 0, 6);
         }
-
         self.swap_buffers();
     }
 }
+

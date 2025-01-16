@@ -12,15 +12,10 @@ use video::color::Color;
 fn move_sprite(engine: &mut Engine, sprite_id: SpriteId, dx: i32, dy: i32, screen_width: i32, screen_height: i32) {
     let sprite = engine.get_sprite(sprite_id).unwrap();
     let (x, y) = sprite.get_position();
-
     sprite.set_position(
         (x + dx).clamp(0, screen_width - sprite.get_width() as i32),
         (y + dy).clamp(0, screen_height - sprite.get_height() as i32)
     );
-}
-
-fn apply_gravity(engine: &mut Engine, sprite_id: SpriteId, screen_width: i32, screen_height: i32) {
-    move_sprite(engine, sprite_id, 0, -10, screen_width, screen_height);
 }
 
 fn main() {
@@ -29,27 +24,24 @@ fn main() {
         .set_clear_color(Color::DARK_GRAY)
         .set_window_name("My Game")
         .poll_keyboard()
-        .hide_cursor()
         .borderless()
+        .hide_cursor()
         .init();
 
-    // engine.toggle_fullscreen();
+    let sheet_id = engine.add_sprite_sheet(ImageType::PNG("assets/font.png"), 16, 16);
 
-    let text_sheet = engine.add_sprite_sheet(ImageType::PNG("assets/font.png"), 16, 16);
-    
-    let sprite_id = engine.add_sprite(text_sheet, 0, 0, 0, 0, 40, 40, None);
+    let sprite_id = engine.add_sprite(sheet_id.unwrap(), 0, 0, 0, 0, 100, 100, None);
 
     while engine.is_running() {
         let events = engine.get_key_events();
         let (width, height) = engine.get_window_dimensions();
-        // apply_gravity(&mut engine, sprite_id, width, height);
         for (key, action) in events {
             println!("{:?}: {:?}", key, action);
             match (key, action) {
-                (Key::ArrowUp, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 0, 20, width, height),
-                (Key::ArrowDown, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 0, -20, width, height),
-                (Key::ArrowRight, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 20, 0, width, height),
-                (Key::ArrowLeft, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, -20, 0, width, height),
+                (Key::ArrowUp, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 0, 40, width, height),
+                (Key::ArrowDown, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 0, -40, width, height),
+                (Key::ArrowRight, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 40, 0, width, height),
+                (Key::ArrowLeft, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, -40, 0, width, height),
                 (Key::F5, Action::Pressed) => engine.toggle_show_fps(),
                 (Key::Escape, Action::Pressed) => engine.stop(),
                 _ => {},

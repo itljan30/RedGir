@@ -2,7 +2,7 @@ use crate::audio::audio_manager::AudioManager;
 use crate::input::input_manager::{InputManager, Key, Action};
 use crate::video::window::WindowManager;
 use crate::video::color::Color;
-use crate::video::sprite::{SpriteSheetId, Sprite, SpriteId, ImageType};
+use crate::video::sprite::{SpriteSheetId, SpriteSheetError, Sprite, SpriteId, ImageType};
 use crate::video::shader_manager::{ShaderId, Shader, ShaderError};
 use crate::video::glfw_window::GlfwWindow;
 
@@ -119,7 +119,7 @@ impl Engine {
         }
     }
 
-    pub fn build(
+    fn build(
         width: u32,
         height: u32,
         clear_color: Color,
@@ -164,7 +164,12 @@ impl Engine {
         self.window.get_dimensions()
     }
 
-    pub fn add_sprite_sheet(&mut self, image_type: ImageType, sprite_width: u32, sprite_height: u32) -> SpriteSheetId {
+    pub fn add_sprite_sheet(
+        &mut self,
+        image_type: ImageType,
+        sprite_width: u32,
+        sprite_height: u32
+    ) -> Result<SpriteSheetId, SpriteSheetError> {
         self.window.add_sprite_sheet(image_type, sprite_width, sprite_height)
     }
 
