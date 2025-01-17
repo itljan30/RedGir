@@ -10,6 +10,7 @@ use crate::video::shader_manager::{
 
 use std::thread::yield_now;
 use std::collections::HashMap;
+use std::ffi::CString;
 
 pub struct WindowManager {
     window: PWindow,
@@ -213,7 +214,7 @@ impl WindowManager {
             let (u_min, v_max, u_max, v_min) = sheet.get_uv(index);
 
 
-            let mut normalized_vertices: [f32; 24] = [
+            let normalized_vertices: [f32; 24] = [
                 // bottom left
                 2.0 * vertices[0] as f32 / width as f32 - 1.0, 2.0 * vertices[1] as f32 / height as f32 - 1.0,
                 u_min, v_min,
@@ -243,13 +244,10 @@ impl WindowManager {
         })
     }
 
-    // to use custom shaders I should make it so that it sorts the sprites by shader and then
-    // creates a separate vao for each shader used to batch efficiently
     pub unsafe fn draw_frame(&mut self) {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
         let mut sprites: Vec<&Sprite> = self.sprites.values().collect();
-
         sprites.sort_by_key(|sprite| sprite.get_layer());
 
         for sprite in sprites {
@@ -291,8 +289,6 @@ impl WindowManager {
 
                 gl::ActiveTexture(gl::TEXTURE0);
                 gl::BindTexture(gl::TEXTURE_2D, texture);
-
-                use std::ffi::CString;
 
                 let texture_name = CString::new("tex_sample").unwrap();
                 let texture_location = gl::GetUniformLocation(shader.get_id(), texture_name.as_ptr());
