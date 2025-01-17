@@ -157,7 +157,7 @@ impl Engine {
         x_position: i32, y_position: i32, 
         layer: i32, width: u32, height: u32
     ) -> SpriteId {
-        self.window.add_sprite(None, None, x_position, y_position, layer, width, height, Some(color), None)
+        self.window.add_quad(color, x_position, y_position, layer, width, height)
     }
 
     pub fn get_window_dimensions(&self) -> (i32, i32) {
@@ -193,9 +193,9 @@ impl Engine {
         shader: Option<ShaderId>,
     ) -> SpriteId {
         self.window.add_sprite(
-            Some(sprite_sheet), Some(sprite_index), 
+            sprite_sheet, sprite_index, 
             x_position, y_position, layer, width, 
-            height, None, shader
+            height, shader
         )
     }
 

@@ -113,6 +113,46 @@ impl SpriteSheet {
         }
     }
 
+    pub fn from_color(color: Color) -> Self {
+        let mut texture_id: GLuint = 0;
+
+        let pixel_tuple = color.to_tuple();
+
+        let pixel_data = [pixel_tuple.0, pixel_tuple.1, pixel_tuple.2, pixel_tuple.3];
+
+        unsafe {
+            gl::GenTextures(1, &mut texture_id);
+            gl::BindTexture(gl::TEXTURE_2D, texture_id);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGBA as i32,
+                1,
+                1,
+                0,
+                gl::RGBA,
+                gl::UNSIGNED_BYTE,
+                pixel_data.as_ptr() as *const _,
+            );
+
+            if gl::GetError() != gl::NO_ERROR {
+                println!("OpenGL Error: {}", gl::GetError());
+                panic!("Failed to create texture");
+            }
+        }
+
+        SpriteSheet {
+            sprites_uv: vec![(0.0, 0.0, 1.0, 1.0)],
+            sheet_id: SpriteSheetId::new(0),
+            texture_id,
+        }
+    }
+
     pub fn set_id(&mut self, id: u32) {
         self.sheet_id = SpriteSheetId::new(id);
     }
@@ -150,22 +190,20 @@ pub struct Sprite {
     layer: i32,
     rotation: f32,
     flip: Flip,
-    sprite_sheet: Option<SpriteSheetId>,
-    sprite_sheet_index: Option<usize>,
-    color: Option<Color>,
+    sprite_sheet: SpriteSheetId,
+    sprite_sheet_index: usize,
     shader: Option<ShaderId>,
 }
 
 impl Sprite {
     pub fn new(
-        sprite_sheet: Option<SpriteSheetId>,
-        sprite_sheet_index: Option<usize>,
+        sprite_sheet: SpriteSheetId,
+        sprite_sheet_index: usize,
         x_position: i32,
         y_position: i32,
         layer: i32,
         width: u32,
         height: u32,
-        color: Option<Color>,
         shader: Option<ShaderId>,
     ) -> Self {
         Sprite {
@@ -179,16 +217,15 @@ impl Sprite {
             sprite_id: SpriteId::new(0),
             rotation: 0.0,
             flip: Flip::None,
-            color,
             shader,
         }
     }
 
-    pub fn get_sprite_sheet_index(&self) -> Option<usize> {
+    pub fn get_sprite_sheet_index(&self) -> usize {
         self.sprite_sheet_index
     }
 
-    pub fn get_sprite_sheet(&self) -> Option<SpriteSheetId> {
+    pub fn get_sprite_sheet(&self) -> SpriteSheetId {
         self.sprite_sheet
     }
 
@@ -233,8 +270,8 @@ impl Sprite {
     }
 
     pub fn set_texture(&mut self, sprite_sheet: SpriteSheetId, sprite_sheet_index: usize) -> &mut Self {
-        self.sprite_sheet = Some(sprite_sheet);
-        self.sprite_sheet_index = Some(sprite_sheet_index);
+        self.sprite_sheet = sprite_sheet;
+        self.sprite_sheet_index = sprite_sheet_index;
         self
     }
 

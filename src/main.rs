@@ -18,6 +18,8 @@ fn main() {
         .hide_cursor()
         .init();
 
+    let quad = engine.add_quad(Color::GREEN, 0, 0, 1, 64, 64);
+
     while engine.is_running() {
         let events = engine.get_key_events();
         for (key, action) in events {

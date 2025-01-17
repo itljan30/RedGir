@@ -112,6 +112,16 @@ impl WindowManager {
         Ok(sheet_id)
     }
 
+    pub fn add_quad(&mut self, color: Color, x: i32, y: i32, layer: i32, width: u32, height: u32) -> SpriteId {
+        let mut sprite_sheet = SpriteSheet::from_color(color);
+        sprite_sheet.set_id(self.last_sprite_id);
+        self.last_sheet_id += 1;
+        let sheet_id = sprite_sheet.get_id();
+        self.sprite_sheets.insert(sheet_id.clone(), sprite_sheet);
+
+        self.add_sprite(sheet_id, 0, x, y, layer, width, height, None)
+    }
+
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
         self.sprites.get_mut(&id)
     }
@@ -129,18 +139,16 @@ impl WindowManager {
 
     pub fn add_sprite(
         &mut self, 
-        sprite_sheet: Option<SpriteSheetId>, 
-        sprite_index: Option<usize>,
+        sprite_sheet: SpriteSheetId,
+        sprite_index: usize,
         x_position: i32, y_position: i32,
         layer: i32, width: u32, height: u32,
-        color: Option<Color>,
         shader: Option<ShaderId>,
     ) -> SpriteId {
         let mut sprite = Sprite::new(
             sprite_sheet, sprite_index, 
             x_position, y_position, layer, 
-            width, height, 
-            color, shader
+            width, height, shader,
         );
 
         sprite.set_id(self.last_sprite_id);
@@ -207,8 +215,8 @@ impl WindowManager {
     fn get_normalized_vertices(&self, sprite: &Sprite) -> Option<[f32; 24]> {
         let (width, height) = self.window.get_framebuffer_size();
         let vertices = sprite.get_vertices();
-        let sheet_id = sprite.get_sprite_sheet()?;
-        let index = sprite.get_sprite_sheet_index()?;
+        let sheet_id = sprite.get_sprite_sheet();
+        let index = sprite.get_sprite_sheet_index();
 
         self.sprite_sheets.get(&sheet_id).map(|sheet| {
             let (u_min, v_max, u_max, v_min) = sheet.get_uv(index);
@@ -285,7 +293,7 @@ impl WindowManager {
                 let shader = self.shaders.get(&self.default_shader).unwrap();
                 shader.use_program();
 
-                let texture = self.sprite_sheets.get(&sprite.get_sprite_sheet().unwrap()).unwrap().get_texture();
+                let texture = self.sprite_sheets.get(&sprite.get_sprite_sheet()).unwrap().get_texture();
 
                 gl::ActiveTexture(gl::TEXTURE0);
                 gl::BindTexture(gl::TEXTURE_2D, texture);
