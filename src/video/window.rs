@@ -210,17 +210,35 @@ impl WindowManager {
         let index = sprite.get_sprite_sheet_index()?;
 
         self.sprite_sheets.get(&sheet_id).map(|sheet| {
-            let (u_min, v_min, u_max, v_max) = sheet.get_uv(index);
+            let (u_min, v_max, u_max, v_min) = sheet.get_uv(index);
 
-            let mut normalized_vertices: [f32; 24] = [0.0; 24];
 
-            for i in 0..6 {
-                normalized_vertices[4 * i] = 2.0 * (vertices[2 * i] as f32 / width as f32) - 1.0;
-                normalized_vertices[4 * i + 1] = 2.0 * (vertices[2 * i + 1] as f32 / height as f32) - 1.0;
+            let mut normalized_vertices: [f32; 24] = [
+                // bottom left
+                2.0 * vertices[0] as f32 / width as f32 - 1.0, 2.0 * vertices[1] as f32 / height as f32 - 1.0,
+                u_min, v_min,
+                
+                // bottom right
+                2.0 * vertices[2] as f32 / width as f32 - 1.0, 2.0 * vertices[3] as f32 / height as f32 - 1.0,
+                u_max, v_min,
 
-                normalized_vertices[4 * i + 2] = if i % 2 == 0 {u_min} else {u_max};
-                normalized_vertices[4 * i + 3] = if i < 3 {v_min} else {v_max};
-            }
+                // top left
+                2.0 * vertices[4] as f32 / width as f32 - 1.0, 2.0 * vertices[5] as f32 / height as f32 - 1.0,
+                u_min, v_max,
+
+                // bottom right
+                2.0 * vertices[6] as f32 / width as f32 - 1.0, 2.0 * vertices[7] as f32 / height as f32 - 1.0,
+                u_max, v_min,
+
+                // top left
+                2.0 * vertices[8] as f32 / width as f32 - 1.0, 2.0 * vertices[9] as f32 / height as f32 - 1.0,
+                u_min, v_max,
+
+                // top right
+                2.0 * vertices[10] as f32 / width as f32 - 1.0, 2.0 * vertices[11] as f32 / height as f32 - 1.0,
+                u_max, v_max,
+            ];
+
             normalized_vertices
         })
     }

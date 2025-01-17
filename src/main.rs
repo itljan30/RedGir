@@ -6,43 +6,58 @@ pub mod utility;
 
 use engine::Engine;
 use input::input_manager::{Key, Action};
-use video::sprite::SpriteId;
+use video::sprite::{SpriteId, SpriteSheetId};
 use video::color::Color;
 
-fn move_sprite(engine: &mut Engine, sprite_id: SpriteId, dx: i32, dy: i32, screen_width: i32, screen_height: i32) {
-    let sprite = engine.get_sprite(sprite_id).unwrap();
-    let (x, y) = sprite.get_position();
-    sprite.set_position(
-        (x + dx).clamp(0, screen_width - sprite.get_width() as i32),
-        (y + dy).clamp(0, screen_height - sprite.get_height() as i32)
-    );
+fn draw_text(engine: &mut Engine,
+    input: String,
+    font_sheet: &SpriteSheetId,
+    x: i32, y: i32, layer: i32,
+    width: u32, height: u32
+) -> Vec<SpriteId> {
+    let characters: Vec<usize> = input
+        .chars()
+        .map(|c| (c as usize).saturating_sub(' ' as usize))
+        .collect();
+
+    let mut text_sprite_ids = Vec::new();
+
+    for (i, character) in characters.iter().enumerate() {
+        text_sprite_ids.push(engine.add_sprite(
+            font_sheet.clone(), 
+            *character,
+            x + (i as u32 * width) as i32,
+            y,
+            layer,
+            width, height,
+            None));
+    }
+
+    text_sprite_ids
 }
 
 fn main() {
     let mut engine = Engine::new()
-        .set_window_size(1280, 720)
-        .set_clear_color(Color::WHITE)
+        .set_window_size(1920, 1080)
+        .set_clear_color(Color::LIGHT_GRAY)
         .set_window_name("My Game")
         .poll_keyboard()
-        // .borderless()
+        .borderless()
         .hide_cursor()
         .init();
 
-    // let sheet_id = engine.add_sprite_sheet("assets/rainbow.png", 2048, 2048);
-    let sheet_id = engine.add_sprite_sheet("assets/transparent_rainbow.png", 640, 360);
+    let sheet_id = engine.add_sprite_sheet("assets/font.png", 16, 16).unwrap();
 
-    let sprite_id = engine.add_sprite(sheet_id.unwrap(), 0, 0, 0, 0, 1280, 720, None);
+
+    let _ = draw_text(&mut engine, "I'm able to write text in here now! yay!!!!!".to_string(), &sheet_id, 0, 1080 - 32, 0, 32, 32);
+    let _ = draw_text(&mut engine, "This is another line I guess".to_string(), &sheet_id, 353, 601, 0, 32, 32);
+    let _ = draw_text(&mut engine, "How about this one?".to_string(), &sheet_id, 1063, 800, 0, 32, 32);
 
     while engine.is_running() {
         let events = engine.get_key_events();
-        let (width, height) = engine.get_window_dimensions();
         for (key, action) in events {
             println!("{:?}: {:?}", key, action);
             match (key, action) {
-                (Key::ArrowUp, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 0, 40, width, height),
-                (Key::ArrowDown, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 0, -40, width, height),
-                (Key::ArrowRight, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, 40, 0, width, height),
-                (Key::ArrowLeft, Action::Pressed | Action::Held) => move_sprite(&mut engine, sprite_id, -40, 0, width, height),
                 (Key::F5, Action::Pressed) => engine.toggle_show_fps(),
                 (Key::Escape, Action::Pressed) => engine.stop(),
                 _ => {},
