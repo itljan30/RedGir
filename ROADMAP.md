@@ -12,7 +12,7 @@
 
     - [x] SpriteSheet
         - [x] Initialize from any image file
-        - [x] Consitently sized sprite sheets of any size
+        - [x] Supports consitently sized sprite sheets of any size
 
 - [ ] Shader system
     - [ ] Default shaders
@@ -20,6 +20,8 @@
             - Places the vertex positions based on position, size, rotation, flip, etc.
         - [x] Fragment Shader
             - Applies given texture to sprite
+
+    - [ ] Shader refactor
 
 - [ ] Main rendering loop
     - [x] Draw in layers (higher layer level shows above lower levels)

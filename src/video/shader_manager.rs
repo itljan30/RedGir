@@ -1,4 +1,4 @@
-use gl::types::{GLuint, GLint};
+use gl::types::{GLuint, GLint, GLenum};
 use std::ffi::{CString, NulError};
 use std::ptr;
 use std::string::FromUtf8Error;
@@ -27,113 +27,66 @@ uniform sampler2D tex_sample;
 out vec4 frag_color;
 
 void main() {
-    // frag_color = vec4(frag_tex_coords, 0.0f, 1.0f);
     frag_color = texture(tex_sample, frag_tex_coords);
 }
 "#;
 
-#[derive(Debug)]
-pub enum ShaderType {
-    VertexShader,
-    FragmentShader,
-}
-
-#[derive(Debug)]
 pub enum ShaderError {
-    NulError(NulError),
-    Utf8Error(FromUtf8Error),
-    CompilationError(String),
     LinkingError(String),
+    CompilationError(String),
+    NulError(NulError),
+    FromUtf8Error(FromUtf8Error),
 }
 
-impl std::fmt::Display for ShaderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ShaderError::NulError(e) => write!(f, "{}", e),
-            ShaderError::Utf8Error(e) => write!(f, "{}", e),
-            ShaderError::CompilationError(e) => write!(f, "{}", e),
-            ShaderError::LinkingError(e) => write!(f, "{}", e),
-        }
+impl From<FromUtf8Error> for ShaderError {
+    fn from(value: FromUtf8Error) -> Self {
+        ShaderError::FromUtf8Error(value)
     }
 }
 
 impl From<NulError> for ShaderError {
-    fn from(error: NulError) -> Self {
-        ShaderError::NulError(error)
+    fn from(value: NulError) -> Self {
+        ShaderError::NulError(value)
     }
 }
 
-impl From<FromUtf8Error> for ShaderError {
-    fn from(error: FromUtf8Error) -> Self {
-        ShaderError::Utf8Error(error)
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct ShaderId {
+pub struct VertexShader {
     id: GLuint,
 }
 
-impl ShaderId {
-    pub fn new(id: GLuint) -> Self {
-        ShaderId {
-            id,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Shader {
-    id: GLuint,
-}
-
-impl Drop for Shader {
-    fn drop(&mut self) {
+impl Drop for VertexShader {
+     fn drop(&mut self) {
         unsafe {
             gl::DeleteShader(self.id);
         }
     }
 }
 
-impl Shader {
-    pub fn new(source: &str, shader_type: ShaderType) -> Result<Shader, ShaderError> {
+impl VertexShader {
+    pub fn new(source: &str) -> Result<Self, ShaderError> {
+        Ok(Self {
+            id: generate_and_compile_shader(source, gl::VERTEX_SHADER)?
+        })
+    }
+}
+
+pub struct FragmentShader {
+    id: GLuint,
+}
+
+impl Drop for FragmentShader {
+     fn drop(&mut self) {
         unsafe {
-            let source = CString::new(source)?;
-            let id = match shader_type {
-                ShaderType::FragmentShader => gl::CreateShader(gl::FRAGMENT_SHADER),
-                ShaderType::VertexShader => gl::CreateShader(gl::VERTEX_SHADER),
-            };
-
-            let shader = Shader {
-                id,
-            };
-
-            gl::ShaderSource(shader.id, 1, &source.as_ptr(), ptr::null());
-            gl::CompileShader(shader.id);
-
-            let mut success: GLint = 0;
-            gl::GetShaderiv(shader.id, gl::COMPILE_STATUS, &mut success);
-
-            if success == 1 {
-                Ok(shader)
-            }
-            else {
-                let mut error_log_size: GLint = 0;
-                gl::GetShaderiv(shader.id, gl::INFO_LOG_LENGTH, &mut error_log_size);
-
-                let mut error_log: Vec<u8> = Vec::with_capacity(error_log_size as usize);
-                gl::GetShaderInfoLog(
-                    shader.id,
-                    error_log_size,
-                    &mut error_log_size,
-                    error_log.as_mut_ptr() as *mut _,
-                );
-
-                error_log.set_len(error_log_size as usize);
-                let log = String::from_utf8(error_log)?;
-                Err(ShaderError::CompilationError(log))
-            }
+            gl::DeleteShader(self.id);
         }
+    }
+}
+
+impl FragmentShader {
+    pub fn new(source: &str) -> Result<Self, ShaderError> {
+        Ok(Self {
+            id: generate_and_compile_shader(source, gl::FRAGMENT_SHADER)?
+        })
     }
 }
 
@@ -150,50 +103,70 @@ impl Drop for ShaderProgram {
 }
 
 impl ShaderProgram {
-    pub fn get_id(&self) -> GLuint {
-        self.id
-    }
-}
-
-impl ShaderProgram {
-    pub fn new(shaders: &[Shader]) -> Result<Self, ShaderError> {
+    pub fn new(vertex_shader: &VertexShader, fragment_shader: &FragmentShader) -> Result<Self, ShaderError> {
+        let program;
         unsafe {
-            let program = ShaderProgram {
+            program = Self {
                 id: gl::CreateProgram(),
             };
 
-            for shader in shaders {
-                gl::AttachShader(program.id, shader.id);
-            }
+            gl::AttachShader(program.id, vertex_shader.id);
+            gl::AttachShader(program.id, fragment_shader.id);
 
             gl::LinkProgram(program.id);
 
-            let mut success: GLint = 0;
+            let mut success = 0;
             gl::GetProgramiv(program.id, gl::LINK_STATUS, &mut success);
 
-            if success == 1 {
-                Ok(program)
-            }
-            else {
-                let mut error_log_size: GLint = 0;
-                gl::GetProgramiv(program.id, gl::INFO_LOG_LENGTH, &mut error_log_size);
-
-                let mut error_log: Vec<u8> = Vec::with_capacity(error_log_size as usize);
+            if success == 0 {
+                let mut log_length = 0;
+                gl::GetProgramiv(program.id, gl::INFO_LOG_LENGTH, &mut log_length);
+                
+                let mut log = Vec::with_capacity(log_length as usize);
                 gl::GetProgramInfoLog(
                     program.id,
-                    error_log_size,
-                    &mut error_log_size,
-                    error_log.as_mut_ptr() as *mut _,
+                    log_length,
+                    &mut log_length,
+                    log.as_mut_ptr() as *mut _,
                 );
 
-                error_log.set_len(error_log_size as usize);
-                let log = String::from_utf8(error_log)?;
-                Err(ShaderError::LinkingError(log))
+                let log = String::from_utf8(log)?;
+                return Err(ShaderError::LinkingError(log));
             }
+        }
+        Ok(program)
+    }
+}
+
+fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLuint, ShaderError> {
+    let source = CString::new(source)?;
+    let shader_id: GLuint;
+    unsafe {
+        shader_id = gl::CreateShader(shader_type);
+        
+        gl::ShaderSource(shader_id, 1, &source.as_ptr(), ptr::null());
+        gl::CompileShader(shader_id);
+
+        let mut success: GLint = 0;
+        gl::GetShaderiv(shader_id, gl::COMPILE_STATUS, &mut success);
+
+        if success == 0 {
+            let mut log_length = 0;
+            gl::GetShaderiv(shader_id, gl::INFO_LOG_LENGTH, &mut log_length);
+
+            let mut log = Vec::with_capacity(log_length as usize);
+            gl::GetShaderInfoLog(
+                shader_id,
+                log_length,
+                ptr::null_mut(),
+                log.as_mut_ptr() as *mut _
+            );
+
+            let log = String::from_utf8(log)?;
+            gl::DeleteShader(shader_id);
+            return Err(ShaderError::CompilationError(log));
         }
     }
 
-    pub unsafe fn use_program(&self) {
-        gl::UseProgram(self.id);
-    }
+    Ok(shader_id)
 }

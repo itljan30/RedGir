@@ -19,7 +19,7 @@ impl Timer {
         (Instant::now() - self.start_time).as_millis()
     }
 
-    pub fn get_elapsed(&self) -> f32 {
+    pub fn get_elapsed_seconds(&self) -> f32 {
         (Instant::now() - self.start_time).as_secs_f32()
     }
 }

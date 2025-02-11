@@ -5,7 +5,7 @@ use crate::utility::timer::Timer;
 use crate::video::color::Color;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError};
 use crate::video::shader_manager::{
-    ShaderType, ShaderError, Shader, ShaderId, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
+    ShaderError, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
 };
 
 use std::thread::yield_now;
@@ -200,12 +200,12 @@ impl WindowManager {
     }
 
     pub fn swap_buffers(&mut self) {
-        while self.timer.get_elapsed() < self.target_frame_time {
+        while self.timer.get_elapsed_seconds() < self.target_frame_time {
             yield_now();
         }
 
         if self.show_fps {
-            println!("{:.2}", 1.0 / self.timer.get_elapsed());
+            println!("{:.2}", 1.0 / self.timer.get_elapsed_seconds());
         }
 
         self.timer.reset();
@@ -308,4 +308,3 @@ impl WindowManager {
         self.swap_buffers();
     }
 }
-
