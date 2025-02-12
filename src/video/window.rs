@@ -249,7 +249,6 @@ impl WindowManager {
         self.sprite_sheets.get(&sheet_id).map(|sheet| {
             let (u_min, v_max, u_max, v_min) = sheet.get_uv(index);
 
-
             let normalized_vertices: [f32; 24] = [
                 // bottom left
                 2.0 * vertices[0] as f32 / width as f32 - 1.0, 2.0 * vertices[1] as f32 / height as f32 - 1.0,

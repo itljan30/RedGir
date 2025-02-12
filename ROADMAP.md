@@ -30,6 +30,8 @@
         - [ ] Batch by sprite sheet
         - [ ] Avoid drawing sprites that are offscreen
 
+    - [ ] Complete refactor
+
 ## Audio
 - [ ] Play audio
 
