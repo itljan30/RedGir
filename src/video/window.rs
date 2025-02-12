@@ -5,8 +5,9 @@ use crate::utility::timer::Timer;
 use crate::video::color::Color;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError};
 use crate::video::shader_manager::{
-    ShaderError, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
+    ShaderId, VertexShader, FragmentShader, ShaderError, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
 };
+use crate::engine::GetId;
 
 use std::thread::yield_now;
 use std::collections::HashMap;
@@ -17,7 +18,9 @@ pub struct WindowManager {
     sprite_sheets: HashMap<SpriteSheetId, SpriteSheet>,
     sprites: HashMap<SpriteId, Sprite>,
     shaders: HashMap<ShaderId, ShaderProgram>,
-    default_shader: ShaderId,
+    default_fragment: Option<FragmentShader>,
+    default_vertex: Option<VertexShader>,
+    default_shader: Option<ShaderId>,
     timer: Timer,
     target_frame_time: f32,
     show_fps: bool,
@@ -40,30 +43,42 @@ impl WindowManager {
     pub fn new(window: PWindow) -> Self {
         let mut shaders = HashMap::new();
         
-        let default_shaders = [
-            Shader::new(DEFAULT_VERTEX_SHADER, ShaderType::VertexShader),
-            Shader::new(DEFAULT_FRAGMENT_SHADER, ShaderType::FragmentShader),
-        ];
+        let default_vertex = VertexShader::new(DEFAULT_VERTEX_SHADER);
+        let default_fragment = FragmentShader::new(DEFAULT_FRAGMENT_SHADER);
 
-        let mut shader: Vec<Shader> = Vec::new();
+        let mut success = true;
 
-        for shader_result in default_shaders.into_iter() {
-            match shader_result {
-                Ok(s) => shader.push(s),
-                Err(e) => eprintln!("Error: Failed to create default shader: {}", e),
-            }
+        if let Err(err) = default_vertex.as_ref() {
+            eprintln!("Error: Failed to create default vertex shader: {}", err);
+            success = false;
+        }
+        
+        if let Err(err) = default_fragment.as_ref() {
+            eprintln!("Error: Failed to create default fragment shader: {}", err);
+            success = false;
         }
 
-        let mut shader_id: ShaderId = ShaderId::new(0);
 
-        if shader.len() == 2 {
-            let default_shader_program = ShaderProgram::new(&shader);
-            match default_shader_program {
-                Ok(program) => {
-                    shader_id = ShaderId::new(program.get_id());
-                    shaders.insert(shader_id, program);
-                }
-                Err(e) => eprintln!("Error: Failed to link default shader program: {}", e),
+        let mut fragment = None;
+        let mut vertex = None;
+        let mut shader_id = None;
+        if success {
+            let default_vertex = default_vertex.unwrap();
+            let default_fragment = default_fragment.unwrap();
+            let default_shader = ShaderProgram::new(&default_vertex, &default_fragment);
+
+            if let Err(err) = default_shader {
+                fragment = None;
+                vertex = None;
+                eprintln!("Failed to link default shaders: {}", err);
+            }
+            else {
+                let default_shader = default_shader.unwrap();
+                let id = default_shader.id();
+                shaders.insert(id, default_shader);
+                shader_id = Some(id);
+                vertex = Some(default_vertex);
+                fragment = Some(default_fragment);
             }
         }
 
@@ -79,6 +94,8 @@ impl WindowManager {
             sprite_sheets: HashMap::new(),
             sprites: HashMap::new(),
             shaders,
+            default_vertex: vertex,
+            default_fragment: fragment,
             default_shader: shader_id,
             timer: Timer::new(),
             target_frame_time: 1.0 / 60.0,
@@ -126,9 +143,13 @@ impl WindowManager {
         self.sprites.get_mut(&id)
     }
 
-    pub fn add_shader_program(&mut self, shaders: &[Shader]) -> Result<ShaderId, ShaderError> {
-        let program = ShaderProgram::new(shaders)?;
-        let shader_id = ShaderId::new(program.get_id());
+    pub fn add_shader_program(
+        &mut self,
+        vertex_shader: &VertexShader,
+        fragment_shader: &FragmentShader
+    ) -> Result<ShaderId, ShaderError> {
+        let program = ShaderProgram::new(vertex_shader, fragment_shader)?;
+        let shader_id = program.id();
         self.shaders.insert(shader_id, program);
         Ok(shader_id)
     }
@@ -290,7 +311,8 @@ impl WindowManager {
                 );
                 gl::EnableVertexAttribArray(1);
 
-                let shader = self.shaders.get(&self.default_shader).unwrap();
+                // TODO make this more generic
+                let shader = self.shaders.get(&self.default_shader.unwrap()).unwrap();
                 shader.use_program();
 
                 let texture = self.sprite_sheets.get(&sprite.get_sprite_sheet()).unwrap().get_texture();
@@ -299,7 +321,7 @@ impl WindowManager {
                 gl::BindTexture(gl::TEXTURE_2D, texture);
 
                 let texture_name = CString::new("tex_sample").unwrap();
-                let texture_location = gl::GetUniformLocation(shader.get_id(), texture_name.as_ptr());
+                let texture_location = gl::GetUniformLocation(shader.get_program_id(), texture_name.as_ptr());
                 gl::Uniform1i(texture_location, 0);
 
                 gl::DrawArrays(gl::TRIANGLES, 0, 6);

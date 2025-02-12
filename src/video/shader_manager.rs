@@ -2,6 +2,7 @@ use gl::types::{GLuint, GLint, GLenum};
 use std::ffi::{CString, NulError};
 use std::ptr;
 use std::string::FromUtf8Error;
+use crate::engine::GetId;
 
 pub const DEFAULT_VERTEX_SHADER: &str = r#"
 #version 330 core
@@ -31,11 +32,23 @@ void main() {
 }
 "#;
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ShaderError {
     LinkingError(String),
     CompilationError(String),
     NulError(NulError),
     FromUtf8Error(FromUtf8Error),
+}
+
+impl std::fmt::Display for ShaderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ShaderError::LinkingError(e)      => write!(f, "Shader Linking Error: {}", e),
+            ShaderError::CompilationError(e)  => write!(f, "Shader Compilation Error: {}", e),
+            ShaderError::NulError(e)          => write!(f, "Nul byte found in shader source: {}", e),
+            ShaderError::FromUtf8Error(e)     => write!(f, "Invalid UTF-8 in shader log: {}", e),
+        }
+    }
 }
 
 impl From<FromUtf8Error> for ShaderError {
@@ -50,6 +63,7 @@ impl From<NulError> for ShaderError {
     }
 }
 
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct VertexShader {
     id: GLuint,
 }
@@ -70,6 +84,7 @@ impl VertexShader {
     }
 }
 
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct FragmentShader {
     id: GLuint,
 }
@@ -90,8 +105,21 @@ impl FragmentShader {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ShaderId {
+    id: GLuint,
+}
+
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct ShaderProgram {
     id: GLuint,
+}
+
+impl GetId for ShaderProgram {
+    type Id = ShaderId;
+    fn id(&self) -> ShaderId {
+        ShaderId { id: self.id }
+    }
 }
 
 impl Drop for ShaderProgram {
@@ -135,6 +163,14 @@ impl ShaderProgram {
             }
         }
         Ok(program)
+    }
+
+    pub fn get_program_id(&self) -> u32 {
+        self.id
+    }
+
+    pub unsafe fn use_program(&self) {
+        gl::UseProgram(self.id)
     }
 }
 

@@ -3,10 +3,15 @@ use crate::input::input_manager::{InputManager, Key, Action};
 use crate::video::window::WindowManager;
 use crate::video::color::Color;
 use crate::video::sprite::{SpriteSheetId, SpriteSheetError, Sprite, SpriteId};
-use crate::video::shader_manager::{ShaderId, Shader, ShaderError};
+use crate::video::shader_manager::{ShaderId, FragmentShader, VertexShader, ShaderError};
 use crate::video::glfw_window::GlfwWindow;
 
 use std::collections::HashMap;
+
+pub trait GetId {
+    type Id;
+    fn id(&self) -> Self::Id;
+}
 
 pub struct EngineBuilder {
     window_name: Option<String>,
@@ -173,8 +178,12 @@ impl Engine {
         self.window.add_sprite_sheet(path, sprite_width, sprite_height)
     }
 
-    pub fn add_shader_group(&mut self, shaders: &[Shader]) -> Result<ShaderId, ShaderError> {
-        self.window.add_shader_program(shaders)
+    pub fn add_shader_group(
+        &mut self,
+        vertex_shader: &VertexShader,
+        fragment_shader: &FragmentShader,
+    ) -> Result<ShaderId, ShaderError> {
+        self.window.add_shader_program(vertex_shader, fragment_shader)
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
