@@ -204,23 +204,6 @@ impl Sprite {
         self.sprite_sheet
     }
 
-    pub fn get_vertices(&self) -> [i32; 12] {
-    [   
-        // bottom left
-        self.x_position, self.y_position,
-        // bottom right
-        self.x_position + self.width as i32, self.y_position,
-        // top left
-        self.x_position, self.y_position + self.height as i32,
-
-        // bottom right
-        self.x_position + self.width as i32, self.y_position,
-        // top left
-        self.x_position, self.y_position + self.height as i32,
-        // top right
-        self.x_position + self.width as i32, self.y_position + self.height as i32
-    ]}
-
     pub fn get_position(&self) -> (i32, i32) {
         (self.x_position, self.y_position)
     }

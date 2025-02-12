@@ -1,5 +1,5 @@
-use crate::video::sprite::{SpriteId, SpriteSheetId};
-use crate::engine::GetId;
+use crate::video::sprite::Sprite;
+use crate::engine::{GetId, Engine};
 
 use gl::types::{GLuint, GLint, GLenum};
 use std::ffi::{CString, NulError};
@@ -128,45 +128,154 @@ impl FragmentShader {
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
-pub enum ShaderDataType {
-    Float       (fn(SpriteId) -> f32),
-    FloatVec2   (fn(SpriteId) -> [f32; 2]),
-    FloatVec3   (fn(SpriteId) -> [f32; 3]),
-    FloatVec4   (fn(SpriteId) -> [f32; 4]),
-    FloatMat2   (fn(SpriteId) -> [[f32; 2]; 2]),
-    FloatMat3   (fn(SpriteId) -> [[f32; 3]; 3]),
-    FloatMat4   (fn(SpriteId) -> [[f32; 4]; 4]),
-    FloatMat2x3 (fn(SpriteId) -> [[f32; 3]; 2]),
-    FloatMat2x4 (fn(SpriteId) -> [[f32; 4]; 2]),
-    FloatMat3x2 (fn(SpriteId) -> [[f32; 2]; 3]),
-    FloatMat3x4 (fn(SpriteId) -> [[f32; 4]; 3]),
-    FloatMat4x2 (fn(SpriteId) -> [[f32; 2]; 4]),
-    FloatMat4x3 (fn(SpriteId) -> [[f32; 3]; 4]),
-    Int         (fn(SpriteId) -> i32),
-    IntVec2     (fn(SpriteId) -> [i32; 2]),
-    IntVec3     (fn(SpriteId) -> [i32; 3]),
-    IntVec4     (fn(SpriteId) -> [i32; 4]),
-    Bool        (fn(SpriteId) -> bool),
-    BoolVec2    (fn(SpriteId) -> [bool; 2]),
-    BoolVec3    (fn(SpriteId) -> [bool; 3]),
-    BoolVec4    (fn(SpriteId) -> [bool; 4]),
-    UInt        (fn(SpriteId) -> u32),
-    UIntVec2    (fn(SpriteId) -> [u32; 2]),
-    UIntVec3    (fn(SpriteId) -> [u32; 3]),
-    UIntVec4    (fn(SpriteId) -> [u32; 4]),
-    Sampler2D   (fn(SpriteId) -> (SpriteSheetId, usize)),
+/// Attributes require data per vertex instead of per sprite.
+/// Therefore, a vec2 is really 4 vec2s, one per vertex
+/// Vertices should be returned in this order:
+/// [[bottom_left], [bottom_right], [top_left], [top_right]]
+pub enum AttributeData {
+    Float       (fn(&Engine, &Sprite) -> [f32; 4]),
+    FloatVec2   (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
+    FloatVec3   (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
+    FloatVec4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
+    Int         (fn(&Engine, &Sprite) -> [i32; 4]),
+    IntVec2     (fn(&Engine, &Sprite) -> [[i32; 2]; 4]),
+    IntVec3     (fn(&Engine, &Sprite) -> [[i32; 3]; 4]),
+    IntVec4     (fn(&Engine, &Sprite) -> [[i32; 4]; 4]),
+    Bool        (fn(&Engine, &Sprite) -> [bool; 4]),
+    BoolVec2    (fn(&Engine, &Sprite) -> [[bool; 2]; 4]),
+    BoolVec3    (fn(&Engine, &Sprite) -> [[bool; 3]; 4]),
+    BoolVec4    (fn(&Engine, &Sprite) -> [[bool; 4]; 4]),
+    UInt        (fn(&Engine, &Sprite) -> [u32; 4]),
+    UIntVec2    (fn(&Engine, &Sprite) -> [[u32; 2]; 4]),
+    UIntVec3    (fn(&Engine, &Sprite) -> [[u32; 3]; 4]),
+    UIntVec4    (fn(&Engine, &Sprite) -> [[u32; 4]; 4]),
 }
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub enum UniformData {
+    Float       (fn(&Engine, &Sprite) -> f32),
+    FloatVec2   (fn(&Engine, &Sprite) -> [f32; 2]),
+    FloatVec3   (fn(&Engine, &Sprite) -> [f32; 3]),
+    FloatVec4   (fn(&Engine, &Sprite) -> [f32; 4]),
+    FloatMat2   (fn(&Engine, &Sprite) -> [[f32; 2]; 2]),
+    FloatMat3   (fn(&Engine, &Sprite) -> [[f32; 3]; 3]),
+    FloatMat4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
+    FloatMat2x3 (fn(&Engine, &Sprite) -> [[f32; 3]; 2]),
+    FloatMat2x4 (fn(&Engine, &Sprite) -> [[f32; 4]; 2]),
+    FloatMat3x2 (fn(&Engine, &Sprite) -> [[f32; 2]; 3]),
+    FloatMat3x4 (fn(&Engine, &Sprite) -> [[f32; 4]; 3]),
+    FloatMat4x2 (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
+    FloatMat4x3 (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
+    Int         (fn(&Engine, &Sprite) -> i32),
+    IntVec2     (fn(&Engine, &Sprite) -> [i32; 2]),
+    IntVec3     (fn(&Engine, &Sprite) -> [i32; 3]),
+    IntVec4     (fn(&Engine, &Sprite) -> [i32; 4]),
+    Bool        (fn(&Engine, &Sprite) -> bool),
+    BoolVec2    (fn(&Engine, &Sprite) -> [bool; 2]),
+    BoolVec3    (fn(&Engine, &Sprite) -> [bool; 3]),
+    BoolVec4    (fn(&Engine, &Sprite) -> [bool; 4]),
+    UInt        (fn(&Engine, &Sprite) -> u32),
+    UIntVec2    (fn(&Engine, &Sprite) -> [u32; 2]),
+    UIntVec3    (fn(&Engine, &Sprite) -> [u32; 3]),
+    UIntVec4    (fn(&Engine, &Sprite) -> [u32; 4]),
+    // TODO add a TextureId wrapper or something, u32 is OpenGL texture id
+    Sampler2D   (fn(&Engine, &Sprite) -> u32),
+}
+
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Uniform {
     name: String,
-    data: ShaderDataType,
+    data: UniformData,
+}
+
+impl Uniform {
+    pub fn new(name: String, data: UniformData) -> Self {
+        Self {
+            name,
+            data,
+        }
+    }
+
+    pub fn texture_from_sprite_sheet(name: String) -> Self {
+        Self {
+            name,
+            data: UniformData::Sampler2D(|engine: &Engine, sprite: &Sprite| {
+                let sprite_sheet_id = sprite.get_sprite_sheet();
+                engine.get_texture_from_sprite_sheet(sprite_sheet_id).unwrap()
+            }),
+        }
+    }
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Attribute {
     name: String,
-    data: ShaderDataType,
+    location: i32,
+    data: AttributeData,
+}
+
+impl Attribute {
+    pub fn new(name: String, location: i32, data: AttributeData) -> Self {
+        Self {
+            name,
+            location,
+            data,
+        }
+    }
+
+    pub fn position(name: String, location: i32) -> Self {
+        Self::new(
+            name,
+            location,
+            AttributeData::FloatVec2(|engine: &Engine, sprite: &Sprite| {
+                let (w_width, w_height) = engine.get_window_dimensions();
+                let (s_width, s_height) = (sprite.get_width(), sprite.get_height());
+                let pos = sprite.get_position();
+                let bottom_left = pos;
+                let bottom_right = (pos.0 + s_width as i32, pos.1);
+                let top_left = (pos.0, pos.1 + s_height as i32);
+                let top_right = (pos.0 + s_width as i32, pos.1 + s_height as i32);
+
+                [
+                    [
+                        2.0 * bottom_left.0 as f32 / w_width as f32 - 1.0,
+                        2.0 * bottom_left.1 as f32 / w_height as f32 - 1.0
+                    ],
+                    [
+                        2.0 * bottom_right.0 as f32 / w_width as f32 - 1.0,
+                        2.0 * bottom_right.1 as f32 / w_height as f32 - 1.0
+                    ],
+                    [
+                        2.0 * top_left.0 as f32 / w_width as f32 - 1.0,
+                        2.0 * top_left.1 as f32 / w_height as f32 - 1.0
+                    ],
+                    [
+                        2.0 * top_right.0 as f32 / w_width as f32 - 1.0,
+                        2.0 * top_right.1 as f32 / w_height as f32 - 1.0
+                    ],
+                ]
+            }),
+        )
+    }
+
+    pub fn texture_uv_from_sprite_sheet(name: String, location: i32) -> Self {
+        Self::new(
+            name,
+            location,
+            AttributeData::FloatVec2(|engine: &Engine, sprite: &Sprite| {
+                let sprite_sheet = sprite.get_sprite_sheet();
+                let index = sprite.get_sprite_sheet_index();
+                let (u_min, v_min, u_max, v_max) = engine.get_uv_from_sprite_sheet(sprite_sheet, index).unwrap();
+                [
+                    [u_min, v_min],
+                    [u_max, v_min],
+                    [u_min, v_max],
+                    [u_max, v_max],
+                ]
+            }),
+        )
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -177,9 +286,9 @@ pub struct ShaderId {
 #[derive(Hash, PartialEq, Eq, Debug)]
 pub struct ShaderProgram {
     id: GLuint,
-    shared_uniforms: Vec<Uniform>,
-    per_sprite_uniforms: Vec<Uniform>,
     attributes: Vec<Attribute>,
+    global_uniforms: Vec<Uniform>,
+    instance_uniforms: Vec<Uniform>,
 }
 
 impl GetId for ShaderProgram {
@@ -202,16 +311,16 @@ impl ShaderProgram {
         vertex_shader: &VertexShader,
         fragment_shader: &FragmentShader,
         attributes: Vec<Attribute>,
-        shared_uniforms: Vec<Uniform>,
-        per_sprite_uniforms: Vec<Uniform>,
+        global_uniforms: Vec<Uniform>,
+        instance_uniforms: Vec<Uniform>,
     ) -> Result<Self, ShaderError> {
         let program;
         unsafe {
             program = Self {
                 id: gl::CreateProgram(),
                 attributes,
-                shared_uniforms,
-                per_sprite_uniforms,
+                global_uniforms,
+                instance_uniforms,
             };
 
             gl::AttachShader(program.id, vertex_shader.id);

@@ -272,4 +272,12 @@ impl Engine {
             self.window.draw_frame();
         }
     }
+
+    pub fn get_uv_from_sprite_sheet(&self, sprite_sheet: SpriteSheetId, index: usize) -> Option<(f32, f32, f32, f32)> {
+        self.window.get_uv_from_sprite_sheet(sprite_sheet, index)
+    }
+
+    pub fn get_texture_from_sprite_sheet(&self, sprite_sheet_id: SpriteSheetId) -> Option<u32> {
+        self.window.get_texture_from_sprite_sheet(sprite_sheet_id)
+    }
 }

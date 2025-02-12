@@ -69,14 +69,13 @@ impl WindowManager {
                 &default_vertex, 
                 &default_fragment,
                 vec![
-
+                    Attribute::position("position".to_string(), 0),
+                    Attribute::texture_uv_from_sprite_sheet("tex_coords".to_string(), 1),
                 ],
+                Vec::new(),
                 vec![
-
+                    Uniform::texture_from_sprite_sheet("tex_sample".to_string()),
                 ],
-                vec![
-
-                ]
             );
 
             if let Err(err) = default_shader {
@@ -119,6 +118,10 @@ impl WindowManager {
             vao,
             vbo,
         }
+    }
+
+    pub fn get_texture_from_sprite_sheet(&self, sprite_sheet_id: SpriteSheetId) -> Option<GLuint> {
+        Some(self.sprite_sheets.get(&sprite_sheet_id)?.get_texture())
     }
     
     pub fn get_default_shader(&self) -> Option<ShaderId> {
@@ -280,43 +283,8 @@ impl WindowManager {
         self.window.swap_buffers();
     }
 
-    fn get_normalized_vertices(&self, sprite: &Sprite) -> Option<[f32; 24]> {
-        let (width, height) = self.window.get_framebuffer_size();
-        let vertices = sprite.get_vertices();
-        let sheet_id = sprite.get_sprite_sheet();
-        let index = sprite.get_sprite_sheet_index();
-
-        self.sprite_sheets.get(&sheet_id).map(|sheet| {
-            let (u_min, v_max, u_max, v_min) = sheet.get_uv(index);
-
-            let normalized_vertices: [f32; 24] = [
-                // bottom left
-                2.0 * vertices[0] as f32 / width as f32 - 1.0, 2.0 * vertices[1] as f32 / height as f32 - 1.0,
-                u_min, v_min,
-                
-                // bottom right
-                2.0 * vertices[2] as f32 / width as f32 - 1.0, 2.0 * vertices[3] as f32 / height as f32 - 1.0,
-                u_max, v_min,
-
-                // top left
-                2.0 * vertices[4] as f32 / width as f32 - 1.0, 2.0 * vertices[5] as f32 / height as f32 - 1.0,
-                u_min, v_max,
-
-                // bottom right
-                2.0 * vertices[6] as f32 / width as f32 - 1.0, 2.0 * vertices[7] as f32 / height as f32 - 1.0,
-                u_max, v_min,
-
-                // top left
-                2.0 * vertices[8] as f32 / width as f32 - 1.0, 2.0 * vertices[9] as f32 / height as f32 - 1.0,
-                u_min, v_max,
-
-                // top right
-                2.0 * vertices[10] as f32 / width as f32 - 1.0, 2.0 * vertices[11] as f32 / height as f32 - 1.0,
-                u_max, v_max,
-            ];
-
-            normalized_vertices
-        })
+    pub fn get_uv_from_sprite_sheet(&self, sprite_sheet: SpriteSheetId, index: usize) -> Option<(f32, f32, f32, f32)> {
+        Some(self.sprite_sheets.get(&sprite_sheet)?.get_uv(index))
     }
 
     pub unsafe fn draw_frame(&mut self) {
@@ -336,22 +304,17 @@ impl WindowManager {
                 // TODO set up uniforms and attribs based on the (not yet implemented) shader properties
 
                 for sprite in group {
-                    if let Some(vertices) = self.get_normalized_vertices(sprite) {
-                        gl::BufferData(
-                            gl::ARRAY_BUFFER, 
-                            (size_of::<f32>() * 24) as isize,
-                            vertices.as_ptr() as *const _,
-                            gl::DYNAMIC_DRAW
-                        );
-
-                        gl::DrawArrays(gl::TRIANGLES, 0, 6);
-                    }
-                    else {
-                        eprintln!("Unable to get normalized vertecies");
-                    }
                 }
             }
         }
         self.swap_buffers();
     }
+}
+
+fn set_attribute(attrib: Attribute) {
+
+}
+
+fn set_uniform(uniform: Uniform) {
+
 }
