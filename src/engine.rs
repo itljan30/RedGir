@@ -3,7 +3,7 @@ use crate::input::input_manager::{InputManager, Key, Action};
 use crate::video::window::WindowManager;
 use crate::video::color::Color;
 use crate::video::sprite::{SpriteSheetId, SpriteSheetError, Sprite, SpriteId};
-use crate::video::shader_manager::{ShaderId, FragmentShader, VertexShader, ShaderError};
+use crate::video::shader_manager::{ShaderId, FragmentShader, VertexShader, ShaderError, Attribute, Uniform};
 use crate::video::glfw_window::GlfwWindow;
 
 use std::collections::HashMap;
@@ -188,8 +188,17 @@ impl Engine {
         &mut self,
         vertex_shader: &VertexShader,
         fragment_shader: &FragmentShader,
+        attributes: Vec<Attribute>,
+        shared_uniforms: Vec<Uniform>,
+        per_sprite_uniform: Vec<Uniform>,
     ) -> Result<ShaderId, ShaderError> {
-        self.window.add_shader_program(vertex_shader, fragment_shader)
+        self.window.add_shader_program(
+            vertex_shader,
+            fragment_shader,
+            attributes,
+            shared_uniforms,
+            per_sprite_uniform
+        )
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {

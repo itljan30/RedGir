@@ -7,7 +7,7 @@ use crate::video::color::Color;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError};
 use crate::video::shader_manager::{
     ShaderId, VertexShader, FragmentShader, ShaderError, ShaderProgram,
-    DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
+    DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER, Attribute, Uniform,
 };
 
 use std::thread::yield_now;
@@ -64,7 +64,20 @@ impl WindowManager {
         if success {
             let default_vertex = default_vertex.unwrap();
             let default_fragment = default_fragment.unwrap();
-            let default_shader = ShaderProgram::new(&default_vertex, &default_fragment);
+            // TODO add default uniforms and attributes
+            let default_shader = ShaderProgram::new(
+                &default_vertex, 
+                &default_fragment,
+                vec![
+
+                ],
+                vec![
+
+                ],
+                vec![
+
+                ]
+            );
 
             if let Err(err) = default_shader {
                 fragment = None;
@@ -159,9 +172,18 @@ impl WindowManager {
     pub fn add_shader_program(
         &mut self,
         vertex_shader: &VertexShader,
-        fragment_shader: &FragmentShader
+        fragment_shader: &FragmentShader,
+        attributes: Vec<Attribute>,
+        shared_uniforms: Vec<Uniform>,
+        per_sprite_uniforms: Vec<Uniform>,
     ) -> Result<ShaderId, ShaderError> {
-        let program = ShaderProgram::new(vertex_shader, fragment_shader)?;
+        let program = ShaderProgram::new(
+            vertex_shader,
+            fragment_shader,
+            attributes,
+            shared_uniforms,
+            per_sprite_uniforms
+        )?;
         let shader_id = program.id();
         self.shaders.insert(shader_id, program);
         Ok(shader_id)
@@ -330,6 +352,6 @@ impl WindowManager {
                 }
             }
         }
-    self.swap_buffers();
+        self.swap_buffers();
     }
 }

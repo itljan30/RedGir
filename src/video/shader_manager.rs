@@ -1,8 +1,10 @@
+use crate::video::sprite::{SpriteId, SpriteSheetId};
+use crate::engine::GetId;
+
 use gl::types::{GLuint, GLint, GLenum};
 use std::ffi::{CString, NulError};
 use std::ptr;
 use std::string::FromUtf8Error;
-use crate::engine::GetId;
 
 pub const DEFAULT_VERTEX_SHADER: &str = r#"
 #version 330 core
@@ -63,9 +65,19 @@ impl From<NulError> for ShaderError {
     }
 }
 
-#[derive(Hash, PartialEq, Eq, Debug)]
+#[derive(Hash, Eq, Debug)]
 pub struct VertexShader {
     id: GLuint,
+}
+
+impl PartialEq for VertexShader {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.id != other.id
+    }
 }
 
 impl Drop for VertexShader {
@@ -79,14 +91,24 @@ impl Drop for VertexShader {
 impl VertexShader {
     pub fn new(source: &str) -> Result<Self, ShaderError> {
         Ok(Self {
-            id: generate_and_compile_shader(source, gl::VERTEX_SHADER)?
+            id: generate_and_compile_shader(source, gl::VERTEX_SHADER)?,
         })
     }
 }
 
-#[derive(Hash, PartialEq, Eq, Debug)]
+#[derive(Hash, Eq, Debug)]
 pub struct FragmentShader {
     id: GLuint,
+}
+
+impl PartialEq for FragmentShader {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        self.id != other.id
+    }
 }
 
 impl Drop for FragmentShader {
@@ -100,9 +122,51 @@ impl Drop for FragmentShader {
 impl FragmentShader {
     pub fn new(source: &str) -> Result<Self, ShaderError> {
         Ok(Self {
-            id: generate_and_compile_shader(source, gl::FRAGMENT_SHADER)?
+            id: generate_and_compile_shader(source, gl::FRAGMENT_SHADER)?,
         })
     }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub enum ShaderDataType {
+    Float       (fn(SpriteId) -> f32),
+    FloatVec2   (fn(SpriteId) -> [f32; 2]),
+    FloatVec3   (fn(SpriteId) -> [f32; 3]),
+    FloatVec4   (fn(SpriteId) -> [f32; 4]),
+    FloatMat2   (fn(SpriteId) -> [[f32; 2]; 2]),
+    FloatMat3   (fn(SpriteId) -> [[f32; 3]; 3]),
+    FloatMat4   (fn(SpriteId) -> [[f32; 4]; 4]),
+    FloatMat2x3 (fn(SpriteId) -> [[f32; 3]; 2]),
+    FloatMat2x4 (fn(SpriteId) -> [[f32; 4]; 2]),
+    FloatMat3x2 (fn(SpriteId) -> [[f32; 2]; 3]),
+    FloatMat3x4 (fn(SpriteId) -> [[f32; 4]; 3]),
+    FloatMat4x2 (fn(SpriteId) -> [[f32; 2]; 4]),
+    FloatMat4x3 (fn(SpriteId) -> [[f32; 3]; 4]),
+    Int         (fn(SpriteId) -> i32),
+    IntVec2     (fn(SpriteId) -> [i32; 2]),
+    IntVec3     (fn(SpriteId) -> [i32; 3]),
+    IntVec4     (fn(SpriteId) -> [i32; 4]),
+    Bool        (fn(SpriteId) -> bool),
+    BoolVec2    (fn(SpriteId) -> [bool; 2]),
+    BoolVec3    (fn(SpriteId) -> [bool; 3]),
+    BoolVec4    (fn(SpriteId) -> [bool; 4]),
+    UInt        (fn(SpriteId) -> u32),
+    UIntVec2    (fn(SpriteId) -> [u32; 2]),
+    UIntVec3    (fn(SpriteId) -> [u32; 3]),
+    UIntVec4    (fn(SpriteId) -> [u32; 4]),
+    Sampler2D   (fn(SpriteId) -> (SpriteSheetId, usize)),
+}
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub struct Uniform {
+    name: String,
+    data: ShaderDataType,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
+pub struct Attribute {
+    name: String,
+    data: ShaderDataType,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -113,6 +177,9 @@ pub struct ShaderId {
 #[derive(Hash, PartialEq, Eq, Debug)]
 pub struct ShaderProgram {
     id: GLuint,
+    shared_uniforms: Vec<Uniform>,
+    per_sprite_uniforms: Vec<Uniform>,
+    attributes: Vec<Attribute>,
 }
 
 impl GetId for ShaderProgram {
@@ -131,11 +198,20 @@ impl Drop for ShaderProgram {
 }
 
 impl ShaderProgram {
-    pub fn new(vertex_shader: &VertexShader, fragment_shader: &FragmentShader) -> Result<Self, ShaderError> {
+    pub fn new(
+        vertex_shader: &VertexShader,
+        fragment_shader: &FragmentShader,
+        attributes: Vec<Attribute>,
+        shared_uniforms: Vec<Uniform>,
+        per_sprite_uniforms: Vec<Uniform>,
+    ) -> Result<Self, ShaderError> {
         let program;
         unsafe {
             program = Self {
                 id: gl::CreateProgram(),
+                attributes,
+                shared_uniforms,
+                per_sprite_uniforms,
             };
 
             gl::AttachShader(program.id, vertex_shader.id);
@@ -163,10 +239,6 @@ impl ShaderProgram {
             }
         }
         Ok(program)
-    }
-
-    pub fn get_program_id(&self) -> u32 {
-        self.id
     }
 
     pub unsafe fn apply(&self) {
