@@ -150,19 +150,25 @@ impl Engine {
             should_poll_mouse_buttons,
             should_poll_scroll,
         );
-        Engine {
+        Self {
             audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
             window: WindowManager::new(window.window),
         }
     }
 
+    /// Returns None if default shader failed to initialize, else returns ShaderId
+    pub fn default_shader(&self) -> Option<ShaderId> {
+        self.window.get_default_shader()
+    }
+
     pub fn add_quad(
         &mut self, color: Color, 
         x_position: i32, y_position: i32, 
-        layer: i32, width: u32, height: u32
+        layer: i32, width: u32, height: u32,
+        shader: ShaderId,
     ) -> Result<SpriteId, SpriteSheetError> {
-        self.window.add_quad(color, x_position, y_position, layer, width, height)
+        self.window.add_quad(color, x_position, y_position, layer, width, height, shader)
     }
 
     pub fn get_window_dimensions(&self) -> (i32, i32) {
@@ -199,7 +205,7 @@ impl Engine {
         sprite_index: usize,
         x_position: i32, y_position: i32,
         layer: i32, width: u32, height: u32,
-        shader: Option<ShaderId>,
+        shader: ShaderId,
     ) -> SpriteId {
         self.window.add_sprite(
             sprite_sheet, sprite_index, 
@@ -242,6 +248,14 @@ impl Engine {
 
     pub fn toggle_border(&mut self) {
         self.window.toggle_border();
+    }
+
+    pub fn get_default_fragment_shader(&self) -> Option<&FragmentShader> {
+        self.window.get_default_fragment_shader()
+    }
+
+    pub fn get_default_vertex_shader(&self) -> Option<&VertexShader> {
+        self.window.get_default_vertex_shader()
     }
 
     pub fn draw_frame(&mut self) {

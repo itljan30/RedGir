@@ -169,7 +169,7 @@ impl ShaderProgram {
         self.id
     }
 
-    pub unsafe fn use_program(&self) {
+    pub unsafe fn apply(&self) {
         gl::UseProgram(self.id)
     }
 }

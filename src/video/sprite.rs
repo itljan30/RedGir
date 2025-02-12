@@ -160,7 +160,7 @@ pub struct Sprite {
     flip: Flip,
     sprite_sheet: SpriteSheetId,
     sprite_sheet_index: usize,
-    shader: Option<ShaderId>,
+    shader: ShaderId,
 }
 
 impl GetId for Sprite {
@@ -179,7 +179,7 @@ impl Sprite {
         layer: i32,
         width: u32,
         height: u32,
-        shader: Option<ShaderId>,
+        shader: ShaderId,
     ) -> Self {
         Sprite {
             sprite_sheet,
@@ -235,8 +235,12 @@ impl Sprite {
         self.sprite_id = id;
     }
 
+    pub fn get_shader(&self) -> ShaderId {
+        self.shader
+    }
+
     pub fn set_shader(&mut self, shader: ShaderId) -> &mut Self {
-        self.shader = Some(shader);
+        self.shader = shader;
         self
     }
 

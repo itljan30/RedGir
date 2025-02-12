@@ -1,17 +1,17 @@
 use glfw::{Context, PWindow};
 use gl::types::GLuint;
 
+use crate::engine::GetId;
 use crate::utility::timer::Timer;
 use crate::video::color::Color;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError};
 use crate::video::shader_manager::{
-    ShaderId, VertexShader, FragmentShader, ShaderError, ShaderProgram, DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
+    ShaderId, VertexShader, FragmentShader, ShaderError, ShaderProgram,
+    DEFAULT_FRAGMENT_SHADER, DEFAULT_VERTEX_SHADER
 };
-use crate::engine::GetId;
 
 use std::thread::yield_now;
-use std::collections::HashMap;
-use std::ffi::CString;
+use std::collections::{HashMap, BTreeMap};
 
 pub struct WindowManager {
     window: PWindow,
@@ -58,7 +58,6 @@ impl WindowManager {
             success = false;
         }
 
-
         let mut fragment = None;
         let mut vertex = None;
         let mut shader_id = None;
@@ -70,7 +69,7 @@ impl WindowManager {
             if let Err(err) = default_shader {
                 fragment = None;
                 vertex = None;
-                eprintln!("Failed to link default shaders: {}", err);
+                eprintln!("Error: Failed to link default shaders: {}", err);
             }
             else {
                 let default_shader = default_shader.unwrap();
@@ -87,9 +86,11 @@ impl WindowManager {
         unsafe {
             gl::GenVertexArrays(1, &mut vao);
             gl::GenBuffers(1, &mut vbo);
+            gl::BindVertexArray(vao);
+            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         }
 
-        WindowManager{
+        Self{
             window,
             sprite_sheets: HashMap::new(),
             sprites: HashMap::new(),
@@ -105,6 +106,10 @@ impl WindowManager {
             vao,
             vbo,
         }
+    }
+    
+    pub fn get_default_shader(&self) -> Option<ShaderId> {
+        self.default_shader
     }
 
     pub fn get_dimensions(&self) -> (i32, i32) {
@@ -135,15 +140,16 @@ impl WindowManager {
         x: i32, y: i32, 
         layer: i32, 
         width: u32, 
-        height: u32
+        height: u32,
+        shader: ShaderId
     ) -> Result<SpriteId, SpriteSheetError> {
         let mut sprite_sheet = SpriteSheet::from_color(color)?;
         sprite_sheet.set_id(self.last_sprite_id);
         self.last_sheet_id += 1;
         let sheet_id = sprite_sheet.id();
-        self.sprite_sheets.insert(sheet_id.clone(), sprite_sheet);
+        self.sprite_sheets.insert(sheet_id, sprite_sheet);
 
-        Ok(self.add_sprite(sheet_id, 0, x, y, layer, width, height, None))
+        Ok(self.add_sprite(sheet_id, 0, x, y, layer, width, height, shader))
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
@@ -171,7 +177,7 @@ impl WindowManager {
         sprite_index: usize,
         x_position: i32, y_position: i32,
         layer: i32, width: u32, height: u32,
-        shader: Option<ShaderId>,
+        shader: ShaderId,
     ) -> SpriteId {
         let mut sprite = Sprite::new(
             sprite_sheet, sprite_index, 
@@ -217,6 +223,18 @@ impl WindowManager {
             true => self.show_fps = false,
             false => self.show_fps = true,
         }
+    }
+
+    pub fn get_default_vertex_shader(&self) -> Option<&VertexShader> {
+        if let Some(shader) = self.default_vertex.as_ref() {
+            Some(shader)
+        } else { None }
+    }
+
+    pub fn get_default_fragment_shader(&self) -> Option<&FragmentShader> {
+        if let Some(shader) = self.default_fragment.as_ref() {
+            Some(shader)
+        } else { None }
     }
 
     pub fn set_fps(&mut self, fps: f32) {
@@ -282,57 +300,36 @@ impl WindowManager {
     pub unsafe fn draw_frame(&mut self) {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
-        let mut sprites: Vec<&Sprite> = self.sprites.values().collect();
-        sprites.sort_by_key(|sprite| sprite.get_layer());
+        // Sort sprites by layer and batch by shader to avoid unnecessary binding
+        let mut grouped_sprites: BTreeMap<i32, HashMap<ShaderId, Vec<&Sprite>>> = BTreeMap::new();
 
-        for sprite in sprites {
-            gl::BindVertexArray(self.vao);
+        for sprite in self.sprites.values() {
+            grouped_sprites.entry(sprite.get_layer()).or_default()
+                .entry(sprite.get_shader()).or_default().push(sprite);
+        }
 
-            if let Some(vertices) = self.get_normalized_vertices(sprite) {
-                gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
-                gl::BufferData(
-                    gl::ARRAY_BUFFER, 
-                    (size_of::<f32>() * 24) as isize,
-                    vertices.as_ptr() as *const _,
-                    gl::DYNAMIC_DRAW
-                );
+        for groups in grouped_sprites.values() {
+            for (shader, group) in groups.iter() {
+                self.shaders.get(&shader).unwrap().apply();
+                // TODO set up uniforms and attribs based on the (not yet implemented) shader properties
 
-                gl::VertexAttribPointer(
-                    0,
-                    2,
-                    gl::FLOAT,
-                    gl::FALSE,
-                    (4 * size_of::<f32>()) as i32,
-                    std::ptr::null()
-                );
-                gl::EnableVertexAttribArray(0);
+                for sprite in group {
+                    if let Some(vertices) = self.get_normalized_vertices(sprite) {
+                        gl::BufferData(
+                            gl::ARRAY_BUFFER, 
+                            (size_of::<f32>() * 24) as isize,
+                            vertices.as_ptr() as *const _,
+                            gl::DYNAMIC_DRAW
+                        );
 
-                gl::VertexAttribPointer(
-                    1,
-                    2,
-                    gl::FLOAT,
-                    gl::FALSE,
-                    (4 * size_of::<f32>()) as i32,
-                    (2 * size_of::<f32>()) as *const _
-                );
-                gl::EnableVertexAttribArray(1);
-
-                // TODO make this more generic
-                let shader = self.shaders.get(&self.default_shader.unwrap()).unwrap();
-                shader.use_program();
-
-                let texture = self.sprite_sheets.get(&sprite.get_sprite_sheet()).unwrap().get_texture();
-
-                gl::ActiveTexture(gl::TEXTURE0);
-                gl::BindTexture(gl::TEXTURE_2D, texture);
-
-                let texture_name = CString::new("tex_sample").unwrap();
-                let texture_location = gl::GetUniformLocation(shader.get_program_id(), texture_name.as_ptr());
-                gl::Uniform1i(texture_location, 0);
-
-                gl::DrawArrays(gl::TRIANGLES, 0, 6);
+                        gl::DrawArrays(gl::TRIANGLES, 0, 6);
+                    }
+                    else {
+                        eprintln!("Unable to get normalized vertecies");
+                    }
+                }
             }
         }
-        self.swap_buffers();
+    self.swap_buffers();
     }
 }

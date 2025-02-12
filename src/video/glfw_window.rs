@@ -16,7 +16,6 @@ impl Default for GlfwWindow {
             "Window",
             true, true, true, true, true, true, true,
         )
-
     }
 }
 
@@ -82,10 +81,10 @@ impl GlfwWindow {
 
         // Make the window's context current
         window.make_current();
-        if should_poll_keys {window.set_key_polling(true)};
-        if should_poll_scroll {window.set_scroll_polling(true)};
-        if should_poll_cursor_pos {window.set_cursor_pos_polling(true)};
-        if should_poll_mouse_buttons {window.set_mouse_button_polling(true)};
+        if should_poll_keys           {window.set_key_polling(true)};
+        if should_poll_scroll         {window.set_scroll_polling(true)};
+        if should_poll_cursor_pos     {window.set_cursor_pos_polling(true)};
+        if should_poll_mouse_buttons  {window.set_mouse_button_polling(true)};
 
         if show_cursor {
             window.set_cursor_mode(glfw::CursorMode::Normal);

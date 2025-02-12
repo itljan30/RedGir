@@ -11,7 +11,7 @@
             - [x] Flip
 
     - [x] SpriteSheet
-        - [x] Initialize from any image file
+        - [x] Initialize from any png or jpeg file
         - [x] Supports consitently sized sprite sheets of any size
 
 - [ ] Shader system
@@ -21,7 +21,7 @@
         - [x] Fragment Shader
             - Applies given texture to sprite
 
-    - [x] Shader refactor
+    - [ ] Add ability for custom inputs to shaders
 
 - [ ] Main rendering loop
     - [x] Draw in layers (higher layer level shows above lower levels)
@@ -29,6 +29,8 @@
         - [ ] Batch by shader
         - [ ] Batch by sprite sheet
         - [ ] Avoid drawing sprites that are offscreen
+
+    - [ ] Allow for custom uniforms and attributes for shaders
 
     - [ ] Complete refactor
 
