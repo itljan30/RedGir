@@ -59,7 +59,12 @@ fn main() {
     engine.set_fps(144.0);
 
     // Add a red quad at position (0, 0) on layer 1 with a size of 32x32 pixels
-    let quad: SpriteId = engine.add_quad(Color::RED, 0, 0, 1, 32, 32);
+    let quad: Result<SpriteId, _> = engine.add_quad(Color::RED, 0, 0, 1, 32, 32);
+    if let Err(err) = quad {
+        panic!("{}", err);
+    }
+
+    let quad = quad.unwrap();
 
     while engine.is_running() {
         let events = engine.get_key_events();
@@ -76,4 +81,5 @@ fn main() {
         engine.draw_frame();
     }
 }
+
 ```

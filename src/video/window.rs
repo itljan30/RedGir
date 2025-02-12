@@ -124,19 +124,26 @@ impl WindowManager {
         let mut sprite_sheet = SpriteSheet::from_image(path, sprite_width, sprite_height)?;
         sprite_sheet.set_id(self.last_sprite_id);
         self.last_sheet_id += 1;
-        let sheet_id = sprite_sheet.get_id();
-        self.sprite_sheets.insert(sheet_id.clone(), sprite_sheet);
+        let sheet_id = sprite_sheet.id();
+        self.sprite_sheets.insert(sheet_id, sprite_sheet);
         Ok(sheet_id)
     }
 
-    pub fn add_quad(&mut self, color: Color, x: i32, y: i32, layer: i32, width: u32, height: u32) -> SpriteId {
-        let mut sprite_sheet = SpriteSheet::from_color(color);
+    pub fn add_quad(
+        &mut self, 
+        color: Color, 
+        x: i32, y: i32, 
+        layer: i32, 
+        width: u32, 
+        height: u32
+    ) -> Result<SpriteId, SpriteSheetError> {
+        let mut sprite_sheet = SpriteSheet::from_color(color)?;
         sprite_sheet.set_id(self.last_sprite_id);
         self.last_sheet_id += 1;
-        let sheet_id = sprite_sheet.get_id();
+        let sheet_id = sprite_sheet.id();
         self.sprite_sheets.insert(sheet_id.clone(), sprite_sheet);
 
-        self.add_sprite(sheet_id, 0, x, y, layer, width, height, None)
+        Ok(self.add_sprite(sheet_id, 0, x, y, layer, width, height, None))
     }
 
     pub fn get_sprite(&mut self, id: SpriteId) -> Option<&mut Sprite> {
@@ -174,13 +181,13 @@ impl WindowManager {
 
         sprite.set_id(self.last_sprite_id);
         self.last_sprite_id += 1;
-        let sprite_id = sprite.get_id();
-        self.sprites.insert(sprite_id.clone(), sprite);
+        let sprite_id = sprite.id();
+        self.sprites.insert(sprite_id, sprite);
         sprite_id
     }
 
-    pub fn remove_sprite(&mut self, sprite_id: &SpriteId) {
-        self.sprites.remove(sprite_id);
+    pub fn remove_sprite(&mut self, sprite_id: SpriteId) {
+        self.sprites.remove(&sprite_id);
     }
 
     pub fn toggle_border(&mut self) {

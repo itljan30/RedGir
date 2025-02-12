@@ -1,14 +1,32 @@
 use crate::video::shader_manager::ShaderId;
 use crate::video::color::Color;
 use crate::utility::file_parser;
+use crate::engine::GetId;
 
+use image::ImageError;
 use gl::types::GLuint;
 
 #[derive(Debug)]
 pub enum SpriteSheetError {
-    IOError(String),
+    IOError(ImageError),
     TextureCreationError(String),
     InvalidSpriteDimensions(String),
+}
+
+impl std::fmt::Display for SpriteSheetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SpriteSheetError::IOError(e)                   => write!(f, "IOError: {}", e),
+            SpriteSheetError::TextureCreationError(e)      => write!(f, "TextureCreationError: {}", e),
+            SpriteSheetError::InvalidSpriteDimensions(e)   => write!(f, "InvalidSpriteDimensions: {}", e),
+        }
+    }
+}
+
+impl From<ImageError> for SpriteSheetError {
+    fn from(value: ImageError) -> Self {
+        SpriteSheetError::IOError(value)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
@@ -19,29 +37,22 @@ pub enum Flip {
     FlipXY,
 }
 
-#[derive(Clone, Copy, Eq, Debug, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct SpriteSheetId {
-    id: u32,
-}
-
-impl SpriteSheetId {
-    pub fn new(id: u32) -> Self {
-        SpriteSheetId {
-            id,
-        }
-    }
-}
-
-impl PartialEq for SpriteSheetId {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
+    id: GLuint,
 }
 
 pub struct SpriteSheet {
     sprites_uv: Vec<(f32, f32, f32, f32)>,
     texture_id: u32,
-    sheet_id: SpriteSheetId,
+    sheet_id: u32,
+}
+
+impl GetId for SpriteSheet {
+    type Id = SpriteSheetId;
+    fn id(&self) -> SpriteSheetId {
+        SpriteSheetId { id: self.sheet_id }
+    }
 }
 
 impl SpriteSheet {
@@ -49,140 +60,97 @@ impl SpriteSheet {
         self.sprites_uv[index]
     }
 
-    pub fn get_texture(&self) -> u32 {
+    pub fn get_texture(&self) -> GLuint {
         self.texture_id
     }
     
     pub fn from_image(png_path: &str, sprite_width: u32, sprite_height: u32) -> Result<Self, SpriteSheetError> {
-        match file_parser::get_rbga_from_image(png_path) {
-            Ok((width, height, pixel_data)) => {
-                if width % sprite_width != 0 || height % sprite_height != 0 {
-                    return Err(SpriteSheetError::InvalidSpriteDimensions(
-                        format!("Error: {} was given invalid dimensions of {}, {}", png_path, sprite_width, sprite_height)
-                    ));
-                }
+        let (width, height, pixel_data) = file_parser::get_rbga_from_image(png_path)?;
 
-                let mut sprites_uv = Vec::new();
-
-                for row in 0..(height / sprite_height) {
-                    for col in 0..(width / sprite_width) {
-                        let u_min = col as f32 * sprite_width as f32 / width as f32;
-                        let v_min = row as f32 * sprite_height as f32 / height as f32;
-                        let u_max = (col + 1) as f32 * sprite_width as f32 / width as f32;
-                        let v_max = (row + 1) as f32 * sprite_height as f32 / height as f32;
-
-                        sprites_uv.push((u_min, v_min, u_max, v_max));
-                    }
-                }
-
-                let mut texture_id: GLuint = 0;
-
-                unsafe {
-                    gl::GenTextures(1, &mut texture_id);
-                    gl::BindTexture(gl::TEXTURE_2D, texture_id);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-                    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-
-                    gl::TexImage2D(
-                        gl::TEXTURE_2D,
-                        0,
-                        gl::RGBA as i32,
-                        width as i32,
-                        height as i32,
-                        0,
-                        gl::RGBA,
-                        gl::UNSIGNED_BYTE,
-                        pixel_data.as_ptr() as *const _,
-                    );
-
-                    if gl::GetError() != gl::NO_ERROR {
-                        println!("OpenGL Error: {}", gl::GetError());
-                        panic!("Failed to create texture");
-                    }
-                }
-
-                Ok(SpriteSheet {
-                    sprites_uv,
-                    sheet_id: SpriteSheetId::new(0),
-                    texture_id,
-                })
-            },
-            Err(e) => Err(SpriteSheetError::IOError(e))
+        if width % sprite_width != 0 || height % sprite_height != 0 {
+            return Err(SpriteSheetError::InvalidSpriteDimensions(
+                format!("SpriteSheet {} was given invalid dimensions: width={}, height={}", png_path, sprite_width, sprite_height)
+            ));
         }
-    }
 
-    pub fn from_color(color: Color) -> Self {
-        let mut texture_id: GLuint = 0;
+        let mut sprites_uv = Vec::new();
 
-        let pixel_tuple = color.to_tuple();
+        for row in 0..(height / sprite_height) {
+            for col in 0..(width / sprite_width) {
+                let u_min = col as f32 * sprite_width as f32 / width as f32;
+                let v_min = row as f32 * sprite_height as f32 / height as f32;
+                let u_max = (col + 1) as f32 * sprite_width as f32 / width as f32;
+                let v_max = (row + 1) as f32 * sprite_height as f32 / height as f32;
 
-        let pixel_data = [pixel_tuple.0, pixel_tuple.1, pixel_tuple.2, pixel_tuple.3];
-
-        unsafe {
-            gl::GenTextures(1, &mut texture_id);
-            gl::BindTexture(gl::TEXTURE_2D, texture_id);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                gl::RGBA as i32,
-                1,
-                1,
-                0,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
-                pixel_data.as_ptr() as *const _,
-            );
-
-            if gl::GetError() != gl::NO_ERROR {
-                println!("OpenGL Error: {}", gl::GetError());
-                panic!("Failed to create texture");
+                sprites_uv.push((u_min, v_min, u_max, v_max));
             }
         }
 
-        SpriteSheet {
-            sprites_uv: vec![(0.0, 0.0, 1.0, 1.0)],
-            sheet_id: SpriteSheetId::new(0),
+        let texture_id = get_texture_id(width, height, pixel_data)?;
+
+        Ok(SpriteSheet {
+            sprites_uv,
+            sheet_id: 0,
             texture_id,
-        }
+        })
+    }
+
+    pub fn from_color(color: Color) -> Result<Self, SpriteSheetError> {
+        let pixel_tuple = color.to_tuple();
+        let pixel_data = vec![pixel_tuple.0, pixel_tuple.1, pixel_tuple.2, pixel_tuple.3];
+
+        let texture_id = get_texture_id(1, 1, pixel_data)?;
+
+        Ok(SpriteSheet {
+            sprites_uv: vec![(0.0, 0.0, 1.0, 1.0)],
+            sheet_id: 0,
+            texture_id,
+        })
     }
 
     pub fn set_id(&mut self, id: u32) {
-        self.sheet_id = SpriteSheetId::new(id);
-    }
-
-    pub fn get_id(&self) -> SpriteSheetId {
-        self.sheet_id
+        self.sheet_id = id;
     }
 }
 
-#[derive(Clone, Copy, Eq, Debug, Hash)]
+fn get_texture_id(width: u32, height: u32, pixel_data: Vec<u8>) -> Result<GLuint, SpriteSheetError> {
+    let mut texture_id: GLuint = 0;
+
+    unsafe {
+        gl::GenTextures(1, &mut texture_id);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as i32,
+            width as i32,
+            height as i32,
+            0,
+            gl::RGBA,
+            gl::UNSIGNED_BYTE,
+            pixel_data.as_ptr() as *const _,
+        );
+
+        // TODO improve error message
+        if gl::GetError() != gl::NO_ERROR {
+            return Err(SpriteSheetError::TextureCreationError(format!("Failed to create texture: {}", gl::GetError())));
+        }
+    }
+    Ok(texture_id)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct SpriteId {
     id: u32,
 }
 
-impl PartialEq for SpriteId {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl SpriteId {
-    fn new(id: u32) -> Self {
-        SpriteId {
-            id,
-        }
-    }
-}
-
 pub struct Sprite {
-    sprite_id: SpriteId,
+    sprite_id: u32,
     x_position: i32,
     y_position: i32,
     width: f32,
@@ -193,6 +161,13 @@ pub struct Sprite {
     sprite_sheet: SpriteSheetId,
     sprite_sheet_index: usize,
     shader: Option<ShaderId>,
+}
+
+impl GetId for Sprite {
+    type Id = SpriteId;
+    fn id(&self) -> SpriteId {
+        SpriteId { id: self.sprite_id }
+    }
 }
 
 impl Sprite {
@@ -214,7 +189,7 @@ impl Sprite {
             layer,
             width: width as f32,
             height: height as f32,
-            sprite_id: SpriteId::new(0),
+            sprite_id: 0,
             rotation: 0.0,
             flip: Flip::None,
             shader,
@@ -246,8 +221,8 @@ impl Sprite {
         self.x_position + self.width as i32, self.y_position + self.height as i32
     ]}
 
-    pub fn get_position(&self) -> (&i32, &i32) {
-        (&self.x_position, &self.y_position)
+    pub fn get_position(&self) -> (i32, i32) {
+        (self.x_position, self.y_position)
     }
 
     pub fn translate(&mut self, dx: i32, dy: i32) -> &mut Self {
@@ -256,16 +231,12 @@ impl Sprite {
         self
     }
 
-    pub fn get_id(&self) -> SpriteId {
-        self.sprite_id.clone()
-    }
-
     pub fn set_id(&mut self, id: u32) {
-        self.sprite_id = SpriteId::new(id);
+        self.sprite_id = id;
     }
 
-    pub fn set_shader(&mut self, shader: Option<ShaderId>) -> &mut Self {
-        self.shader = shader;
+    pub fn set_shader(&mut self, shader: ShaderId) -> &mut Self {
+        self.shader = Some(shader);
         self
     }
 

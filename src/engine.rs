@@ -161,7 +161,7 @@ impl Engine {
         &mut self, color: Color, 
         x_position: i32, y_position: i32, 
         layer: i32, width: u32, height: u32
-    ) -> SpriteId {
+    ) -> Result<SpriteId, SpriteSheetError> {
         self.window.add_quad(color, x_position, y_position, layer, width, height)
     }
 
@@ -208,7 +208,7 @@ impl Engine {
         )
     }
 
-    pub fn remove_sprite(&mut self, sprite_id: &SpriteId) {
+    pub fn remove_sprite(&mut self, sprite_id: SpriteId) {
         self.window.remove_sprite(sprite_id);
     }
 

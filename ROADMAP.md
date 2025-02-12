@@ -1,14 +1,14 @@
 # Features
 ## Video
-- [ ] Sprite system
-    - [ ] Sprite / Quad
-        - [ ] Customizations
+- [x] Sprite system
+    - [x] Sprite / Quad
+        - [x] Customizations
             - [x] Position
             - [x] Size
             - [x] Layer
             - [x] Texture
-            - [ ] Rotation
-            - [ ] Flip
+            - [x] Rotation
+            - [x] Flip
 
     - [x] SpriteSheet
         - [x] Initialize from any image file
@@ -21,7 +21,7 @@
         - [x] Fragment Shader
             - Applies given texture to sprite
 
-    - [ ] Shader refactor
+    - [x] Shader refactor
 
 - [ ] Main rendering loop
     - [x] Draw in layers (higher layer level shows above lower levels)
