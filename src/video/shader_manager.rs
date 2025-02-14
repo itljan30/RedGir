@@ -45,10 +45,10 @@ pub enum ShaderError {
 impl std::fmt::Display for ShaderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ShaderError::LinkingError(e)      => write!(f, "Shader Linking Error: {}", e),
-            ShaderError::CompilationError(e)  => write!(f, "Shader Compilation Error: {}", e),
-            ShaderError::NulError(e)          => write!(f, "Nul byte found in shader source: {}", e),
-            ShaderError::FromUtf8Error(e)     => write!(f, "Invalid UTF-8 in shader log: {}", e),
+            ShaderError::LinkingError(e)     => write!(f, "Shader Linking Error: {}", e),
+            ShaderError::CompilationError(e) => write!(f, "Shader Compilation Error: {}", e),
+            ShaderError::NulError(e)         => write!(f, "Nul byte found in shader source: {}", e),
+            ShaderError::FromUtf8Error(e)    => write!(f, "Invalid UTF-8 in shader log: {}", e),
         }
     }
 }
@@ -65,19 +65,9 @@ impl From<NulError> for ShaderError {
     }
 }
 
-#[derive(Hash, Eq, Debug)]
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct VertexShader {
     id: GLuint,
-}
-
-impl PartialEq for VertexShader {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        self.id != other.id
-    }
 }
 
 impl Drop for VertexShader {
@@ -96,19 +86,9 @@ impl VertexShader {
     }
 }
 
-#[derive(Hash, Eq, Debug)]
+#[derive(Hash, PartialEq, Eq, Debug)]
 pub struct FragmentShader {
     id: GLuint,
-}
-
-impl PartialEq for FragmentShader {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        self.id != other.id
-    }
 }
 
 impl Drop for FragmentShader {
@@ -179,37 +159,8 @@ pub enum UniformData {
     UIntVec3    (fn(&Engine, &Sprite) -> [u32; 3]),
     UIntVec4    (fn(&Engine, &Sprite) -> [u32; 4]),
     // TODO add a TextureId wrapper or something, u32 is OpenGL texture id
+    /// NOTE u32 is OpenGL texture id
     Sampler2D   (fn(&Engine, &Sprite) -> u32),
-}
-
-pub enum UniformResult {
-    Float       (f32),
-    FloatVec2   ([f32; 2]),
-    FloatVec3   ([f32; 3]),
-    FloatVec4   ([f32; 4]),
-    FloatMat2   ([[f32; 2]; 2]),
-    FloatMat3   ([[f32; 3]; 3]),
-    FloatMat4   ([[f32; 4]; 4]),
-    FloatMat2x3 ([[f32; 3]; 2]),
-    FloatMat2x4 ([[f32; 4]; 2]),
-    FloatMat3x2 ([[f32; 2]; 3]),
-    FloatMat3x4 ([[f32; 4]; 3]),
-    FloatMat4x2 ([[f32; 2]; 4]),
-    FloatMat4x3 ([[f32; 3]; 4]),
-    Int         (i32),
-    IntVec2     ([i32; 2]),
-    IntVec3     ([i32; 3]),
-    IntVec4     ([i32; 4]),
-    Bool        (bool),
-    BoolVec2    ([bool; 2]),
-    BoolVec3    ([bool; 3]),
-    BoolVec4    ([bool; 4]),
-    UInt        (u32),
-    UIntVec2    ([u32; 2]),
-    UIntVec3    ([u32; 3]),
-    UIntVec4    ([u32; 4]),
-    // TODO add a TextureId wrapper or something, u32 is OpenGL texture id
-    Sampler2D   (u32),
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
@@ -219,6 +170,13 @@ pub struct Uniform {
 }
 
 impl Uniform {
+    pub fn new(name: String, data: UniformData) -> Self {
+        Self {
+            name,
+            data,
+        }
+    }
+
     pub fn bind(&self, shader_id: GLuint, engine: &Engine, sprite: &Sprite) {
         let location;
         unsafe {
@@ -330,14 +288,6 @@ impl Uniform {
                     gl::BindTexture(gl::TEXTURE_2D, texture_id);
                 },
             };
-        }
-    }
-
-
-    pub fn new(name: String, data: UniformData) -> Self {
-        Self {
-            name,
-            data,
         }
     }
 
@@ -530,9 +480,9 @@ impl VertexBuffer {
 #[derive(Hash, PartialEq, Eq, Debug)]
 pub struct ShaderProgram {
     id: GLuint,
-    pub attributes: Vec<Attribute>,
-    pub global_uniforms: Vec<Uniform>,
-    pub instance_uniforms: Vec<Uniform>,
+    attributes: Vec<Attribute>,
+    global_uniforms: Vec<Uniform>,
+    instance_uniforms: Vec<Uniform>,
     vao: VertexArray,
     vbo: VertexBuffer,
 }
@@ -560,8 +510,6 @@ impl ShaderProgram {
         global_uniforms: Vec<Uniform>,
         instance_uniforms: Vec<Uniform>,
     ) -> Result<Self, ShaderError> {
-        // TODO create VBO and VAO and maybe apply attributes or uniforms now if it can / needs to
-        // be done now
         unsafe {
             let id = gl::CreateProgram();
             gl::AttachShader(id, vertex_shader.id);
@@ -588,14 +536,15 @@ impl ShaderProgram {
                 return Err(ShaderError::LinkingError(log));
             }
 
+            let vbo = VertexBuffer::new(gl::ARRAY_BUFFER);
+            vbo.bind();
+
             let mut offset = 0;
             let vao = VertexArray::new();
             vao.bind();
             for attribute in attributes.iter() {
                 offset = vao.set_attribute(attribute, offset);
             }
-
-            let vbo = VertexBuffer::new(gl::ARRAY_BUFFER);
 
             Ok(Self {
                 id,
@@ -608,157 +557,41 @@ impl ShaderProgram {
         }
     }
 
-    pub unsafe fn fill_vbo(&self, engine: &Engine, sprite: &Sprite) {
+    pub unsafe fn apply_global_uniforms(&self, engine: &Engine, sprite: &Sprite) {
+        for uniform in self.global_uniforms() {
+            uniform.bind(self.id, engine, sprite)
+        }
+    }
 
+    pub unsafe fn apply_instance_uniforms(&self, engine: &Engine, sprite: &Sprite) {
+        for uniform in self.instance_uniforms() {
+            uniform.bind(self.id, engine, sprite);
+        }
+    }
+
+    pub unsafe fn fill_vbo(&self, engine: &Engine, sprite: &Sprite) {
         let mut buffer_data = Vec::new();
 
-        for attribute in &self.attributes {
+        for attribute in self.attributes() {
             match attribute.data{ // Call the function to get the data
-                AttributeData::Float(func)     => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::FloatVec2(func) => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::FloatVec3(func) => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::FloatVec4(func) => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::Int(func)       => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::IntVec2(func)   => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::IntVec3(func)   => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::IntVec4(func)   => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::Bool(func)      => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::BoolVec2(func)  => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::BoolVec3(func)  => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::BoolVec4(func)  => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::UInt(func)      => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::UIntVec2(func)  => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::UIntVec3(func)  => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
-                AttributeData::UIntVec4(func)  => {
-                    let data = func(engine, sprite);
-                    let byte_slice = std::slice::from_raw_parts(
-                        data.as_ptr() as *const u8,
-                        data.len() * std::mem::size_of_val(&data[0]),
-                    );
-
-                    buffer_data.extend_from_slice(byte_slice);
-                }
+                AttributeData::Float(func)     => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::FloatVec2(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::FloatVec3(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::FloatVec4(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::Int(func)       => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::IntVec2(func)   => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::IntVec3(func)   => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::IntVec4(func)   => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::Bool(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::BoolVec2(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::BoolVec3(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::BoolVec4(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::UInt(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::UIntVec2(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::UIntVec3(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                AttributeData::UIntVec4(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
             }
+
             gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo.id);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
@@ -767,6 +600,18 @@ impl ShaderProgram {
                 gl::DYNAMIC_DRAW,
             );
         }
+    }
+
+    pub fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
+
+    pub fn global_uniforms(&self) -> &Vec<Uniform> {
+        &self.global_uniforms
+    }
+
+    pub fn instance_uniforms(&self) -> &Vec<Uniform> {
+        &self.instance_uniforms
     }
 
     pub unsafe fn apply(&self) {
@@ -807,4 +652,16 @@ fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLui
     }
 
     Ok(shader_id)
+}
+
+unsafe fn push_callback_result_as_slice<T: Sized + Copy>(buffer: &mut Vec<u8>, data: &[T]) {
+    let new_data = [
+        data[0], data[1], data[2],
+        data[1], data[2], data[3],
+    ];
+    let byte_slice = std::slice::from_raw_parts(
+        new_data.as_ptr() as *const u8,
+        new_data.len() * std::mem::size_of::<T>()
+    );
+    buffer.extend_from_slice(byte_slice);
 }

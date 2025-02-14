@@ -265,7 +265,7 @@ impl WindowManager {
         Some(self.sprite_sheets.get(&sprite_sheet)?.get_uv(index))
     }
 
-    pub unsafe fn draw_frame(&mut self) {
+    pub unsafe fn draw_frame(&mut self, engine: *const Engine) {
         gl::Clear(gl::COLOR_BUFFER_BIT);
 
         // Sort sprites by layer and batch by shader to avoid unnecessary binding
@@ -280,19 +280,13 @@ impl WindowManager {
             for (shader, group) in groups.iter() {
                 let program = self.shaders.get(&shader).unwrap();
                 program.apply();
-                for uniform in program.global_uniforms.iter() {
-                    uniform.bind(shader.id(), engine, group[0]);
-                }
+                program.apply_global_uniforms(&*engine, group[0]);
 
                 for &sprite in group {
-                    for uniform in program.instance_uniforms.iter() {
-                        uniform.bind(shader.id(), engine, sprite);
-                    }
-
-                    program.fill_vbo(engine, sprite);
+                    program.apply_instance_uniforms(&*engine, sprite);
+                    program.fill_vbo(&*engine, sprite);
 
                     gl::DrawArrays(gl::TRIANGLES, 0, 6);
-
                 }
             }
         }

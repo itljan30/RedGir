@@ -150,6 +150,7 @@ impl Engine {
             should_poll_mouse_buttons,
             should_poll_scroll,
         );
+
         Self {
             audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
@@ -269,7 +270,13 @@ impl Engine {
 
     pub fn draw_frame(&mut self) {
         unsafe {
-            self.window.draw_frame();
+            // NOTE In order for shader attribute and uniform callbacks to have access to relevant data
+            // inside the engine we need to pass a reference to the engine to this funcion. Rust
+            // doesn't like this because that would be borrowing self.window both mutably and
+            // immutably. Instead I'm passing a raw pointer. It only gets used as an immutable
+            // reference, so there shouldn't be any issues. Depending on how things change though,
+            // this could be a point of bugs showing up.
+            self.window.draw_frame(self as *const Engine);
         }
     }
 

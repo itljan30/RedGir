@@ -16,9 +16,9 @@ pub enum SpriteSheetError {
 impl std::fmt::Display for SpriteSheetError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SpriteSheetError::IOError(e)                   => write!(f, "IOError: {}", e),
-            SpriteSheetError::TextureCreationError(e)      => write!(f, "TextureCreationError: {}", e),
-            SpriteSheetError::InvalidSpriteDimensions(e)   => write!(f, "InvalidSpriteDimensions: {}", e),
+            SpriteSheetError::IOError(e)                 => write!(f, "IOError: {}", e),
+            SpriteSheetError::TextureCreationError(e)    => write!(f, "TextureCreationError: {}", e),
+            SpriteSheetError::InvalidSpriteDimensions(e) => write!(f, "InvalidSpriteDimensions: {}", e),
         }
     }
 }
@@ -96,9 +96,7 @@ impl SpriteSheet {
     }
 
     pub fn from_color(color: Color) -> Result<Self, SpriteSheetError> {
-        let pixel_tuple = color.to_tuple();
-        let pixel_data = vec![pixel_tuple.0, pixel_tuple.1, pixel_tuple.2, pixel_tuple.3];
-
+        let pixel_data = vec![color.r, color.b, color.g, color.a];
         let texture_id = get_texture_id(1, 1, pixel_data)?;
 
         Ok(SpriteSheet {
@@ -121,8 +119,8 @@ fn get_texture_id(width: u32, height: u32, pixel_data: Vec<u8>) -> Result<GLuint
         gl::BindTexture(gl::TEXTURE_2D, texture_id);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_EDGE as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_EDGE as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
 
         gl::TexImage2D(
             gl::TEXTURE_2D,
@@ -137,8 +135,16 @@ fn get_texture_id(width: u32, height: u32, pixel_data: Vec<u8>) -> Result<GLuint
         );
 
         // TODO improve error message
-        if gl::GetError() != gl::NO_ERROR {
-            return Err(SpriteSheetError::TextureCreationError(format!("Failed to create texture: {}", gl::GetError())));
+        let error = gl::GetError();
+        if error != gl::NO_ERROR {
+            let info = match error {
+                gl::INVALID_ENUM => "Invalid Enum",
+                gl::INVALID_VALUE => "Invalid Value",
+                gl::INVALID_OPERATION => "Invalid Operation",
+                gl::OUT_OF_MEMORY => "Out of memory",
+                _ => "Unkown error",
+            };
+            return Err(SpriteSheetError::TextureCreationError(format!("Failed to create texture: {}", info)));
         }
     }
     Ok(texture_id)
