@@ -1,7 +1,7 @@
 use glfw::{Context, PWindow};
 use gl::types::GLuint;
 
-use crate::engine::GetId;
+use crate::engine::{GetId, Engine};
 use crate::utility::timer::Timer;
 use crate::video::color::Color;
 use crate::video::sprite::{Sprite, SpriteId, SpriteSheet, SpriteSheetId, SpriteSheetError};
@@ -26,17 +26,6 @@ pub struct WindowManager {
     show_fps: bool,
     last_sprite_id: u32,
     last_sheet_id: u32,
-    vao: GLuint,
-    vbo: GLuint,
-}
-
-impl Drop for WindowManager {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteBuffers(1, &self.vbo);
-            gl::DeleteVertexArrays(1, &self.vao);
-        }
-    }
 }
 
 impl WindowManager {
@@ -93,15 +82,6 @@ impl WindowManager {
             }
         }
 
-        let mut vao: GLuint = 0;
-        let mut vbo: GLuint = 0;
-        unsafe {
-            gl::GenVertexArrays(1, &mut vao);
-            gl::GenBuffers(1, &mut vbo);
-            gl::BindVertexArray(vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        }
-
         Self{
             window,
             sprite_sheets: HashMap::new(),
@@ -115,8 +95,6 @@ impl WindowManager {
             show_fps: false,
             last_sprite_id: 0,
             last_sheet_id: 0,
-            vao,
-            vbo,
         }
     }
 
@@ -300,21 +278,24 @@ impl WindowManager {
 
         for groups in grouped_sprites.values() {
             for (shader, group) in groups.iter() {
-                self.shaders.get(&shader).unwrap().apply();
-                // TODO set up uniforms and attribs based on the (not yet implemented) shader properties
+                let program = self.shaders.get(&shader).unwrap();
+                program.apply();
+                for uniform in program.global_uniforms.iter() {
+                    uniform.bind(shader.id(), engine, group[0]);
+                }
 
-                for sprite in group {
+                for &sprite in group {
+                    for uniform in program.instance_uniforms.iter() {
+                        uniform.bind(shader.id(), engine, sprite);
+                    }
+
+                    program.fill_vbo(engine, sprite);
+
+                    gl::DrawArrays(gl::TRIANGLES, 0, 6);
+
                 }
             }
         }
         self.swap_buffers();
     }
-}
-
-fn set_attribute(attrib: Attribute) {
-
-}
-
-fn set_uniform(uniform: Uniform) {
-
 }

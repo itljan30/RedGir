@@ -182,6 +182,35 @@ pub enum UniformData {
     Sampler2D   (fn(&Engine, &Sprite) -> u32),
 }
 
+pub enum UniformResult {
+    Float       (f32),
+    FloatVec2   ([f32; 2]),
+    FloatVec3   ([f32; 3]),
+    FloatVec4   ([f32; 4]),
+    FloatMat2   ([[f32; 2]; 2]),
+    FloatMat3   ([[f32; 3]; 3]),
+    FloatMat4   ([[f32; 4]; 4]),
+    FloatMat2x3 ([[f32; 3]; 2]),
+    FloatMat2x4 ([[f32; 4]; 2]),
+    FloatMat3x2 ([[f32; 2]; 3]),
+    FloatMat3x4 ([[f32; 4]; 3]),
+    FloatMat4x2 ([[f32; 2]; 4]),
+    FloatMat4x3 ([[f32; 3]; 4]),
+    Int         (i32),
+    IntVec2     ([i32; 2]),
+    IntVec3     ([i32; 3]),
+    IntVec4     ([i32; 4]),
+    Bool        (bool),
+    BoolVec2    ([bool; 2]),
+    BoolVec3    ([bool; 3]),
+    BoolVec4    ([bool; 4]),
+    UInt        (u32),
+    UIntVec2    ([u32; 2]),
+    UIntVec3    ([u32; 3]),
+    UIntVec4    ([u32; 4]),
+    // TODO add a TextureId wrapper or something, u32 is OpenGL texture id
+    Sampler2D   (u32),
+}
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Uniform {
@@ -190,6 +219,121 @@ pub struct Uniform {
 }
 
 impl Uniform {
+    pub fn bind(&self, shader_id: GLuint, engine: &Engine, sprite: &Sprite) {
+        let location;
+        unsafe {
+            location = gl::GetUniformLocation(shader_id, self.name.as_ptr() as *const i8);
+            match self.data {
+                UniformData::Float(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform1f(location, data);
+                }
+                UniformData::FloatVec2(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform2f(location, data[0], data[1]);
+                },
+                UniformData::FloatVec3(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform3f(location, data[0], data[1], data[2])
+                },
+                UniformData::FloatVec4(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform4f(location, data[0], data[1], data[2], data[3])
+                },
+                UniformData::FloatMat2(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix2fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat3(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix3fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat4(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix4fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat2x3(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix2x3fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat2x4(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix2x4fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat3x2(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix3x2fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat3x4(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix3x4fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat4x2(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix4x2fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::FloatMat4x3(func) => {
+                    let data = func(engine, sprite);
+                    gl::UniformMatrix4x3fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
+                },
+                UniformData::Int(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform1i(location, data);
+                },
+                UniformData::IntVec2(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform2i(location, data[0], data[1]);
+                },
+                UniformData::IntVec3(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform3i(location, data[0], data[1], data[2])
+                },
+                UniformData::IntVec4(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform4i(location, data[0], data[1], data[2], data[3])
+                },
+                UniformData::Bool(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform1i(location, data as GLint);
+                },
+                UniformData::BoolVec2(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform2i(location, data[0] as GLint, data[1] as GLint);
+                },
+                UniformData::BoolVec3(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform3i(location, data[0] as GLint, data[1] as GLint, data[2] as GLint);
+                },
+                UniformData::BoolVec4(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform4i(location, data[0] as GLint, data[1] as GLint, data[2] as GLint, data[3] as GLint)
+                },
+                UniformData::UInt(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform1ui(location, data);
+                },
+                UniformData::UIntVec2(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform2ui(location, data[0], data[1]);
+                },
+                UniformData::UIntVec3(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform3ui(location, data[0], data[1], data[2]);
+                },
+                UniformData::UIntVec4(func) => {
+                    let data = func(engine, sprite);
+                    gl::Uniform4ui(location, data[0], data[1], data[2], data[3]);
+                },
+                UniformData::Sampler2D(func) => {
+                    let texture_id = func(engine, sprite);
+                    gl::ActiveTexture(gl::TEXTURE0);
+                    gl::BindTexture(gl::TEXTURE_2D, texture_id);
+                },
+            };
+        }
+    }
+
+
     pub fn new(name: String, data: UniformData) -> Self {
         Self {
             name,
@@ -211,12 +355,12 @@ impl Uniform {
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Attribute {
     name: String,
-    location: i32,
+    location: u32,
     data: AttributeData,
 }
 
 impl Attribute {
-    pub fn new(name: String, location: i32, data: AttributeData) -> Self {
+    pub fn new(name: String, location: u32, data: AttributeData) -> Self {
         Self {
             name,
             location,
@@ -224,7 +368,7 @@ impl Attribute {
         }
     }
 
-    pub fn position(name: String, location: i32) -> Self {
+    pub fn position(name: String, location: u32) -> Self {
         Self::new(
             name,
             location,
@@ -259,7 +403,7 @@ impl Attribute {
         )
     }
 
-    pub fn texture_uv_from_sprite_sheet(name: String, location: i32) -> Self {
+    pub fn texture_uv_from_sprite_sheet(name: String, location: u32) -> Self {
         Self::new(
             name,
             location,
@@ -283,12 +427,114 @@ pub struct ShaderId {
     id: GLuint,
 }
 
+impl GetId for ShaderId {
+    type Id = u32;
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
+#[derive(Hash, PartialEq, Eq, Debug)]
+struct VertexArray {
+    id: GLuint
+}
+
+impl Drop for VertexArray {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteVertexArrays(1, [self.id].as_ptr());
+        }
+    }
+}
+
+impl VertexArray {
+    fn new() -> Self {
+        let mut id = 0;
+        unsafe {
+            gl::GenVertexArrays(1, &mut id);
+        }
+        Self { id }
+    }
+
+    /// Sets the attribute to the vao.
+    /// Returns the offset for next the attribute.
+    fn set_attribute(&self, attribute: &Attribute, offset: u32) -> u32 {
+        let (len, size, gl_type) = match attribute.data {
+            AttributeData::Float(_)     => (1, size_of::<f32>(), gl::FLOAT),
+            AttributeData::FloatVec2(_) => (2, size_of::<f32>(), gl::FLOAT),
+            AttributeData::FloatVec3(_) => (3, size_of::<f32>(), gl::FLOAT),
+            AttributeData::FloatVec4(_) => (4, size_of::<f32>(), gl::FLOAT),
+            AttributeData::Int(_)       => (1, size_of::<i32>(), gl::INT),
+            AttributeData::IntVec2(_)   => (2, size_of::<i32>(), gl::INT),
+            AttributeData::IntVec3(_)   => (3, size_of::<i32>(), gl::INT),
+            AttributeData::IntVec4(_)   => (4, size_of::<i32>(), gl::INT),
+            AttributeData::Bool(_)      => (1, size_of::<bool>(), gl::UNSIGNED_BYTE),
+            AttributeData::BoolVec2(_)  => (2, size_of::<bool>(), gl::UNSIGNED_BYTE),
+            AttributeData::BoolVec3(_)  => (3, size_of::<bool>(), gl::UNSIGNED_BYTE),
+            AttributeData::BoolVec4(_)  => (4, size_of::<bool>(), gl::UNSIGNED_BYTE),
+            AttributeData::UInt(_)      => (1, size_of::<u32>(), gl::UNSIGNED_INT),
+            AttributeData::UIntVec2(_)  => (2, size_of::<u32>(), gl::UNSIGNED_INT),
+            AttributeData::UIntVec3(_)  => (3, size_of::<u32>(), gl::UNSIGNED_INT),
+            AttributeData::UIntVec4(_)  => (4, size_of::<u32>(), gl::UNSIGNED_INT),
+        };
+        unsafe {
+            gl::VertexAttribPointer(
+                attribute.location,
+                len,
+                gl_type,
+                gl::FALSE,
+                0 as GLint,
+                offset as *const _,
+            );
+            gl::EnableVertexAttribArray(attribute.location);
+        }
+        (len as u32 * size as u32) + offset
+    }
+
+    pub unsafe fn bind(&self) {
+        gl::BindVertexArray(self.id);
+    }
+}
+
+#[derive(Hash, PartialEq, Eq, Debug)]
+struct VertexBuffer {
+    id: GLuint,
+    target: GLuint,
+}
+
+impl Drop for VertexBuffer {
+    fn drop(&mut self) { 
+        unsafe {
+            gl::DeleteBuffers(1, [self.id].as_ptr());
+        }
+    }
+}
+
+impl VertexBuffer {
+    fn new(target: GLuint) -> Self {
+        let mut id = 0;
+        unsafe {
+            gl::GenBuffers(1, &mut id);
+        }
+        Self {
+            id,
+            target,
+        }
+    }
+
+    pub unsafe fn bind(&self) {
+        gl::BindBuffer(self.target, self.id);
+    }
+}
+
 #[derive(Hash, PartialEq, Eq, Debug)]
 pub struct ShaderProgram {
     id: GLuint,
-    attributes: Vec<Attribute>,
-    global_uniforms: Vec<Uniform>,
-    instance_uniforms: Vec<Uniform>,
+    pub attributes: Vec<Attribute>,
+    pub global_uniforms: Vec<Uniform>,
+    pub instance_uniforms: Vec<Uniform>,
+    vao: VertexArray,
+    vbo: VertexBuffer,
 }
 
 impl GetId for ShaderProgram {
@@ -314,30 +560,25 @@ impl ShaderProgram {
         global_uniforms: Vec<Uniform>,
         instance_uniforms: Vec<Uniform>,
     ) -> Result<Self, ShaderError> {
-        let program;
+        // TODO create VBO and VAO and maybe apply attributes or uniforms now if it can / needs to
+        // be done now
         unsafe {
-            program = Self {
-                id: gl::CreateProgram(),
-                attributes,
-                global_uniforms,
-                instance_uniforms,
-            };
+            let id = gl::CreateProgram();
+            gl::AttachShader(id, vertex_shader.id);
+            gl::AttachShader(id, fragment_shader.id);
 
-            gl::AttachShader(program.id, vertex_shader.id);
-            gl::AttachShader(program.id, fragment_shader.id);
-
-            gl::LinkProgram(program.id);
+            gl::LinkProgram(id);
 
             let mut success = 0;
-            gl::GetProgramiv(program.id, gl::LINK_STATUS, &mut success);
+            gl::GetProgramiv(id, gl::LINK_STATUS, &mut success);
 
             if success == 0 {
                 let mut log_length = 0;
-                gl::GetProgramiv(program.id, gl::INFO_LOG_LENGTH, &mut log_length);
+                gl::GetProgramiv(id, gl::INFO_LOG_LENGTH, &mut log_length);
                 
                 let mut log = Vec::with_capacity(log_length as usize);
                 gl::GetProgramInfoLog(
-                    program.id,
+                    id,
                     log_length,
                     &mut log_length,
                     log.as_mut_ptr() as *mut _,
@@ -346,12 +587,192 @@ impl ShaderProgram {
                 let log = String::from_utf8(log)?;
                 return Err(ShaderError::LinkingError(log));
             }
+
+            let mut offset = 0;
+            let vao = VertexArray::new();
+            vao.bind();
+            for attribute in attributes.iter() {
+                offset = vao.set_attribute(attribute, offset);
+            }
+
+            let vbo = VertexBuffer::new(gl::ARRAY_BUFFER);
+
+            Ok(Self {
+                id,
+                attributes,
+                global_uniforms,
+                instance_uniforms,
+                vao,
+                vbo,
+            })
         }
-        Ok(program)
+    }
+
+    pub unsafe fn fill_vbo(&self, engine: &Engine, sprite: &Sprite) {
+
+        let mut buffer_data = Vec::new();
+
+        for attribute in &self.attributes {
+            match attribute.data{ // Call the function to get the data
+                AttributeData::Float(func)     => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::FloatVec2(func) => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::FloatVec3(func) => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::FloatVec4(func) => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::Int(func)       => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::IntVec2(func)   => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::IntVec3(func)   => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::IntVec4(func)   => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::Bool(func)      => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::BoolVec2(func)  => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::BoolVec3(func)  => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::BoolVec4(func)  => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::UInt(func)      => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::UIntVec2(func)  => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::UIntVec3(func)  => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+                AttributeData::UIntVec4(func)  => {
+                    let data = func(engine, sprite);
+                    let byte_slice = std::slice::from_raw_parts(
+                        data.as_ptr() as *const u8,
+                        data.len() * std::mem::size_of_val(&data[0]),
+                    );
+
+                    buffer_data.extend_from_slice(byte_slice);
+                }
+            }
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo.id);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                buffer_data.len() as isize,
+                buffer_data.as_ptr() as *const _,
+                gl::DYNAMIC_DRAW,
+            );
+        }
     }
 
     pub unsafe fn apply(&self) {
-        gl::UseProgram(self.id)
+        gl::UseProgram(self.id);
+        self.vao.bind();
+        self.vbo.bind();
     }
 }
 
