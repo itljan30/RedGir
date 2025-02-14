@@ -25,7 +25,6 @@ pub struct WindowManager {
     target_frame_time: f32,
     show_fps: bool,
     last_sprite_id: u32,
-    last_sheet_id: u32,
 }
 
 impl WindowManager {
@@ -94,7 +93,6 @@ impl WindowManager {
             target_frame_time: 1.0 / 60.0,
             show_fps: false,
             last_sprite_id: 0,
-            last_sheet_id: 0,
         }
     }
 
@@ -120,9 +118,7 @@ impl WindowManager {
         sprite_width: u32,
         sprite_height: u32
     ) -> Result<SpriteSheetId, SpriteSheetError> {
-        let mut sprite_sheet = SpriteSheet::from_image(path, sprite_width, sprite_height)?;
-        sprite_sheet.set_id(self.last_sprite_id);
-        self.last_sheet_id += 1;
+        let sprite_sheet = SpriteSheet::from_image(path, sprite_width, sprite_height)?;
         let sheet_id = sprite_sheet.id();
         self.sprite_sheets.insert(sheet_id, sprite_sheet);
         Ok(sheet_id)
@@ -137,9 +133,7 @@ impl WindowManager {
         height: u32,
         shader: ShaderId
     ) -> Result<SpriteId, SpriteSheetError> {
-        let mut sprite_sheet = SpriteSheet::from_color(color)?;
-        sprite_sheet.set_id(self.last_sprite_id);
-        self.last_sheet_id += 1;
+        let sprite_sheet = SpriteSheet::from_color(color)?;
         let sheet_id = sprite_sheet.id();
         self.sprite_sheets.insert(sheet_id, sprite_sheet);
 

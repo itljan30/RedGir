@@ -45,13 +45,12 @@ pub struct SpriteSheetId {
 pub struct SpriteSheet {
     sprites_uv: Vec<(f32, f32, f32, f32)>,
     texture_id: u32,
-    sheet_id: u32,
 }
 
 impl GetId for SpriteSheet {
     type Id = SpriteSheetId;
     fn id(&self) -> SpriteSheetId {
-        SpriteSheetId { id: self.sheet_id }
+        SpriteSheetId { id: self.texture_id }
     }
 }
 
@@ -90,7 +89,6 @@ impl SpriteSheet {
 
         Ok(SpriteSheet {
             sprites_uv,
-            sheet_id: 0,
             texture_id,
         })
     }
@@ -101,13 +99,8 @@ impl SpriteSheet {
 
         Ok(SpriteSheet {
             sprites_uv: vec![(0.0, 0.0, 1.0, 1.0)],
-            sheet_id: 0,
             texture_id,
         })
-    }
-
-    pub fn set_id(&mut self, id: u32) {
-        self.sheet_id = id;
     }
 }
 
