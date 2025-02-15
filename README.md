@@ -1,26 +1,21 @@
 # RedGir
 
-**RedGir** is a minimalistic game engine designed to abstract away the low-level details of graphics, audio, and input management.
-**RedGir** utilizes Rust's glfw and gl crates to handle graphics in a flexible and portable manner.
+RedGir is a minimalistic 2d game engine designed to abstract away the low-level details of graphics, audio, and input management.
+RedGir utilizes Rust's glfw and gl crates to handle graphics in a flexible and portable manner.
 
 ## Features
 ### Core Features
 - **Graphics Management:**
-    - Abstraction over OpenGL for rendering using a robust sprite system.
-    - Handles window initialization allowing for custom properties.
-    - Allows dynamic window property customization.
+    - Sprite based system that allows for easy manipulation of sprite data.
+    - Flexible shader management system that allows the user to easily load shaders and supply custom 
+    uniforms and attributes via callback functions.
 
 - **Audio Integration:**
    - Abstraction over OpenAL for audio playback and management. *(Planned)*
 
 - **Input Handling:**
-    - Keyboard and mouse event polling.
+    - Easily track which keys have been pressed, held, or released each frame.
     - Mouse position polling. *(Planned)*
-
-### Customization Options
-- Sprite sheets, sprites, and quads are easily created and configurable.
-- Manage layers, positions, rotations, and shaders of sprites / quads.
-- Properties of window such as dimensions, bordered, clear color, and more.
 
 ### Planned Features
 TODO
@@ -59,11 +54,10 @@ fn main() {
     engine.set_fps(144.0);
 
     // Add a red quad at position (0, 0) on layer 1 with a size of 32x32 pixels
-    let quad: Result<SpriteId, _> = engine.add_quad(Color::RED, 0, 0, 1, 32, 32);
-    if let Err(err) = quad {
-        panic!("{}", err);
+    let quad: Result<SpriteId, _> = engine.add_quad(Color::RED, 0, 0, 1, 32, 32, engine.default_shader().unwrap());
+    if let Err(e) = quad {
+        panic!("{}", e);
     }
-
     let quad = quad.unwrap();
 
     while engine.is_running() {
@@ -81,5 +75,4 @@ fn main() {
         engine.draw_frame();
     }
 }
-
 ```
