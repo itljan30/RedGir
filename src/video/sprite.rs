@@ -196,6 +196,14 @@ impl Sprite {
         }
     }
 
+    pub fn get_rotation(&self) -> f32 {
+        self.rotation
+    }
+
+    pub fn get_flip(&self) -> Flip {
+        self.flip
+    }
+
     pub fn get_sprite_sheet_index(&self) -> usize {
         self.sprite_sheet_index
     }

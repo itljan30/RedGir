@@ -52,16 +52,17 @@ impl WindowManager {
         if success {
             let default_vertex = default_vertex.unwrap();
             let default_fragment = default_fragment.unwrap();
-            // TODO add default uniforms and attributes
             let default_shader = ShaderProgram::new(
                 &default_vertex, 
                 &default_fragment,
                 vec![
-                    Attribute::texture_uv_from_sprite_sheet("tex_coords".to_string(), 1),
                     Attribute::position("position".to_string(), 0),
+                    Attribute::texture_uv_from_sprite_sheet("tex_coords".to_string(), 1),
                 ],
                 Vec::new(),
                 vec![
+                    Uniform::rotation("rotation".to_string()),
+                    Uniform::size("sprite_size".to_string()),
                     Uniform::texture_from_sprite_sheet("tex_sample".to_string()),
                 ],
             );

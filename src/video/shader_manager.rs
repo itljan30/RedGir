@@ -1,4 +1,4 @@
-use crate::video::sprite::Sprite;
+use crate::video::sprite::{Sprite, Flip};
 use crate::engine::{GetId, Engine};
 
 use gl::types::{GLuint, GLint, GLenum};
@@ -12,10 +12,24 @@ pub const DEFAULT_VERTEX_SHADER: &str = r#"
 layout (location = 0) in vec2 position;
 layout (location = 1) in vec2 tex_coords;
 
+uniform float rotation;
+uniform vec2 sprite_size;
+
 out vec2 frag_tex_coords;
 
 void main() {
-    gl_Position = vec4(position, 0.0f, 1.0f);
+    vec2 centered_sprite = sprite_size * 0.5f;
+
+    mat2 rotation_matrix = mat2(
+        cos(rotation), -sin(rotation),
+        sin(rotation), cos(rotation)
+    );
+
+    vec2 rotated_sprite = centered_sprite * rotation_matrix
+
+    vec2 final_position = position + rotated_sprite;
+
+    gl_Position = vec4(final_position, 0.0f, 1.0f);
     frag_tex_coords = tex_coords;
 }
 "#;
@@ -119,17 +133,8 @@ pub enum AttributeData {
     FloatVec3   (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
     FloatVec4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
     Int         (fn(&Engine, &Sprite) -> [i32; 4]),
-    IntVec2     (fn(&Engine, &Sprite) -> [[i32; 2]; 4]),
-    IntVec3     (fn(&Engine, &Sprite) -> [[i32; 3]; 4]),
-    IntVec4     (fn(&Engine, &Sprite) -> [[i32; 4]; 4]),
     Bool        (fn(&Engine, &Sprite) -> [bool; 4]),
-    BoolVec2    (fn(&Engine, &Sprite) -> [[bool; 2]; 4]),
-    BoolVec3    (fn(&Engine, &Sprite) -> [[bool; 3]; 4]),
-    BoolVec4    (fn(&Engine, &Sprite) -> [[bool; 4]; 4]),
     UInt        (fn(&Engine, &Sprite) -> [u32; 4]),
-    UIntVec2    (fn(&Engine, &Sprite) -> [[u32; 2]; 4]),
-    UIntVec3    (fn(&Engine, &Sprite) -> [[u32; 3]; 4]),
-    UIntVec4    (fn(&Engine, &Sprite) -> [[u32; 4]; 4]),
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
@@ -148,17 +153,8 @@ pub enum UniformData {
     FloatMat4x2 (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
     FloatMat4x3 (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
     Int         (fn(&Engine, &Sprite) -> i32),
-    IntVec2     (fn(&Engine, &Sprite) -> [i32; 2]),
-    IntVec3     (fn(&Engine, &Sprite) -> [i32; 3]),
-    IntVec4     (fn(&Engine, &Sprite) -> [i32; 4]),
     Bool        (fn(&Engine, &Sprite) -> bool),
-    BoolVec2    (fn(&Engine, &Sprite) -> [bool; 2]),
-    BoolVec3    (fn(&Engine, &Sprite) -> [bool; 3]),
-    BoolVec4    (fn(&Engine, &Sprite) -> [bool; 4]),
     UInt        (fn(&Engine, &Sprite) -> u32),
-    UIntVec2    (fn(&Engine, &Sprite) -> [u32; 2]),
-    UIntVec3    (fn(&Engine, &Sprite) -> [u32; 3]),
-    UIntVec4    (fn(&Engine, &Sprite) -> [u32; 4]),
     // TODO add a TextureId wrapper or something, u32 is OpenGL texture id
     /// NOTE u32 is OpenGL texture id
     Sampler2D   (fn(&Engine, &Sprite) -> u32),
@@ -175,6 +171,33 @@ impl Uniform {
         Self {
             name,
             data,
+        }
+    }
+
+    /// A preset Uniform that returns a float representing the rotation of the sprite in radians.
+    pub fn rotation(name: String) -> Self {
+        Self {
+            name,
+            data: UniformData::Float(|_engine: &Engine, sprite: &Sprite| {
+                sprite.get_rotation()
+            }),
+        }
+    }
+
+    /// A preset Uniform that returns a vec2 of float representing [horizontal, vertical], 0.0 for
+    /// false, 1.0 for true
+    pub fn flip(name: String) -> Self {
+        Self {
+            name,
+            data: UniformData::FloatVec2(|_engine: &Engine, sprite: &Sprite| {
+                let flip = sprite.get_flip();
+                match flip {
+                    Flip::None   => [0.0, 0.0],
+                    Flip::FlipX  => [1.0, 0.0],
+                    Flip::FlipY  => [0.0, 1.0],
+                    Flip::FlipXY => [1.0, 1.0],
+                }
+            }),
         }
     }
 
@@ -239,49 +262,13 @@ impl Uniform {
                     let data = func(engine, sprite);
                     gl::Uniform1i(location, data);
                 },
-                UniformData::IntVec2(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform2i(location, data[0], data[1]);
-                },
-                UniformData::IntVec3(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform3i(location, data[0], data[1], data[2])
-                },
-                UniformData::IntVec4(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform4i(location, data[0], data[1], data[2], data[3])
-                },
                 UniformData::Bool(func) => {
                     let data = func(engine, sprite);
                     gl::Uniform1i(location, data as GLint);
                 },
-                UniformData::BoolVec2(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform2i(location, data[0] as GLint, data[1] as GLint);
-                },
-                UniformData::BoolVec3(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform3i(location, data[0] as GLint, data[1] as GLint, data[2] as GLint);
-                },
-                UniformData::BoolVec4(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform4i(location, data[0] as GLint, data[1] as GLint, data[2] as GLint, data[3] as GLint)
-                },
                 UniformData::UInt(func) => {
                     let data = func(engine, sprite);
                     gl::Uniform1ui(location, data);
-                },
-                UniformData::UIntVec2(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform2ui(location, data[0], data[1]);
-                },
-                UniformData::UIntVec3(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform3ui(location, data[0], data[1], data[2]);
-                },
-                UniformData::UIntVec4(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform4ui(location, data[0], data[1], data[2], data[3]);
                 },
                 UniformData::Sampler2D(func) => {
                     let texture_id = func(engine, sprite);
@@ -289,6 +276,16 @@ impl Uniform {
                     gl::BindTexture(gl::TEXTURE_2D, texture_id);
                 },
             };
+        }
+    }
+
+    pub fn size(name: String) -> Self {
+        Self {
+            name,
+            data: UniformData::FloatVec2(|_engine: &Engine, sprite: &Sprite| {
+                let (width, height) = (sprite.get_width(), sprite.get_height());
+                [width as f32, height as f32]
+            }),
         }
     }
 
@@ -319,6 +316,7 @@ impl Attribute {
         }
     }
 
+    /// A preset Attribute that returns a [[f32; 2]; 4], or (x, y) position for each vertex.
     pub fn position(name: String, location: u32) -> Self {
         Self::new(
             name,
@@ -354,6 +352,7 @@ impl Attribute {
         )
     }
 
+    /// A preset Attribute that returns a [[f32; 2]; 4], or (u, v) texture position for each vertex.
     pub fn texture_uv_from_sprite_sheet(name: String, location: u32) -> Self {
         Self::new(
             name,
@@ -416,17 +415,8 @@ impl VertexArray {
             AttributeData::FloatVec3(_) => (3, size_of::<f32>(), gl::FLOAT),
             AttributeData::FloatVec4(_) => (4, size_of::<f32>(), gl::FLOAT),
             AttributeData::Int(_)       => (1, size_of::<i32>(), gl::INT),
-            AttributeData::IntVec2(_)   => (2, size_of::<i32>(), gl::INT),
-            AttributeData::IntVec3(_)   => (3, size_of::<i32>(), gl::INT),
-            AttributeData::IntVec4(_)   => (4, size_of::<i32>(), gl::INT),
             AttributeData::Bool(_)      => (1, size_of::<bool>(), gl::UNSIGNED_BYTE),
-            AttributeData::BoolVec2(_)  => (2, size_of::<bool>(), gl::UNSIGNED_BYTE),
-            AttributeData::BoolVec3(_)  => (3, size_of::<bool>(), gl::UNSIGNED_BYTE),
-            AttributeData::BoolVec4(_)  => (4, size_of::<bool>(), gl::UNSIGNED_BYTE),
             AttributeData::UInt(_)      => (1, size_of::<u32>(), gl::UNSIGNED_INT),
-            AttributeData::UIntVec2(_)  => (2, size_of::<u32>(), gl::UNSIGNED_INT),
-            AttributeData::UIntVec3(_)  => (3, size_of::<u32>(), gl::UNSIGNED_INT),
-            AttributeData::UIntVec4(_)  => (4, size_of::<u32>(), gl::UNSIGNED_INT),
         };
         unsafe {
             gl::EnableVertexAttribArray(attribute.location);
@@ -580,17 +570,8 @@ impl ShaderProgram {
                 AttributeData::FloatVec3(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
                 AttributeData::FloatVec4(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
                 AttributeData::Int(func)       => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::IntVec2(func)   => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::IntVec3(func)   => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::IntVec4(func)   => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
                 AttributeData::Bool(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::BoolVec2(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::BoolVec3(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::BoolVec4(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
                 AttributeData::UInt(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::UIntVec2(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::UIntVec3(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::UIntVec4(func)  => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
             }
 
             gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo.id);
