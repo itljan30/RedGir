@@ -30,6 +30,7 @@ uniform sampler2D tex_sample;
 out vec4 frag_color;
 
 void main() {
+
     frag_color = texture(tex_sample, frag_tex_coords);
 }
 "#;
@@ -428,17 +429,17 @@ impl VertexArray {
             AttributeData::UIntVec4(_)  => (4, size_of::<u32>(), gl::UNSIGNED_INT),
         };
         unsafe {
+            gl::EnableVertexAttribArray(attribute.location);
             gl::VertexAttribPointer(
                 attribute.location,
                 len,
                 gl_type,
                 gl::FALSE,
-                0 as GLint,
+                0,
                 offset as *const _,
             );
-            gl::EnableVertexAttribArray(attribute.location);
         }
-        (len as u32 * size as u32) + offset
+        (len as u32 * size as u32 * 6) + offset
     }
 
     pub unsafe fn bind(&self) {
@@ -654,6 +655,7 @@ fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLui
     Ok(shader_id)
 }
 
+/// [[bottom_left], [bottom_right], [top_left], [top_right]]
 unsafe fn push_callback_result_as_slice<T: Sized + Copy>(buffer: &mut Vec<u8>, data: &[T]) {
     let new_data = [
         data[0], data[1], data[2],

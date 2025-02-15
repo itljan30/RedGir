@@ -76,10 +76,11 @@ impl SpriteSheet {
 
         for row in 0..(height / sprite_height) {
             for col in 0..(width / sprite_width) {
+                // we're iterating from top to bottom, so we need to invert the v calculations
                 let u_min = col as f32 * sprite_width as f32 / width as f32;
-                let v_min = row as f32 * sprite_height as f32 / height as f32;
+                let v_min = (row + 1) as f32 * sprite_height as f32 / height as f32;
                 let u_max = (col + 1) as f32 * sprite_width as f32 / width as f32;
-                let v_max = (row + 1) as f32 * sprite_height as f32 / height as f32;
+                let v_max = row as f32 * sprite_height as f32 / height as f32;
 
                 sprites_uv.push((u_min, v_min, u_max, v_max));
             }

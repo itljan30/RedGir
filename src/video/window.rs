@@ -57,8 +57,8 @@ impl WindowManager {
                 &default_vertex, 
                 &default_fragment,
                 vec![
-                    Attribute::position("position".to_string(), 0),
                     Attribute::texture_uv_from_sprite_sheet("tex_coords".to_string(), 1),
+                    Attribute::position("position".to_string(), 0),
                 ],
                 Vec::new(),
                 vec![

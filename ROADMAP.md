@@ -21,18 +21,17 @@
         - [x] Fragment Shader
             - Applies given texture to sprite
 
-    - [ ] Add ability for custom inputs to shaders
+    - [x] Add ability for custom inputs to shaders
 
 - [ ] Main rendering loop
     - [x] Draw in layers (higher layer level shows above lower levels)
     - [ ] Optimizations
-        - [ ] Batch by shader
+        - [x] Batch by shader
         - [ ] Batch by sprite sheet
         - [ ] Avoid drawing sprites that are offscreen
 
-    - [ ] Allow for custom uniforms and attributes for shaders
-
-    - [ ] Complete refactor
+    - [x] Allow for custom uniforms and attributes for shaders
+    - [x] Complete refactor
 
 ## Audio
 - [ ] Play audio
