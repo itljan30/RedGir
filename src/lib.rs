@@ -4,6 +4,8 @@ mod audio;
 mod engine;
 mod utility;
 
+pub mod ffi;
+
 pub use engine::Engine;
 pub use input::input_manager::{Key, Action};
 pub use video::color::Color;

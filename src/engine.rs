@@ -1,4 +1,4 @@
-use crate::audio::audio_manager::AudioManager;
+// use crate::audio::audio_manager::AudioManager;
 use crate::input::input_manager::{InputManager, Key, Action};
 use crate::video::window::WindowManager;
 use crate::video::color::Color;
@@ -89,12 +89,11 @@ impl EngineBuilder {
     }
 }
 
-#[allow(dead_code)]
 pub struct Engine {
     // NOTE window is first so that all openGL things get dropped before the glfw context
     window: WindowManager,
     input_manager: InputManager,
-    audio_manager: AudioManager,
+    // audio_manager: AudioManager,
     global_timer: Timer,
 }
 
@@ -104,7 +103,7 @@ impl Default for Engine {
 
         Engine {
             window: WindowManager::new(window.window),
-            audio_manager: AudioManager::new(),
+            // audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
             global_timer: Timer::new(),
         }
@@ -156,7 +155,7 @@ impl Engine {
         );
 
         Self {
-            audio_manager: AudioManager::new(),
+            // audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
             window: WindowManager::new(window.window),
             global_timer: Timer::new(),
