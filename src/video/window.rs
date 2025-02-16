@@ -37,12 +37,12 @@ impl WindowManager {
         let mut success = true;
 
         if let Err(err) = default_vertex.as_ref() {
-            eprintln!("Error: Failed to create default vertex shader: {}", err);
+            eprintln!("Error: Failed to create default vertex shader:\n\t{}", err);
             success = false;
         }
         
         if let Err(err) = default_fragment.as_ref() {
-            eprintln!("Error: Failed to create default fragment shader: {}", err);
+            eprintln!("Error: Failed to create default fragment shader:\n\t{}", err);
             success = false;
         }
 
@@ -56,13 +56,16 @@ impl WindowManager {
                 &default_vertex, 
                 &default_fragment,
                 vec![
-                    Attribute::position("position".to_string(), 0),
+                    Attribute::position("u_position".to_string(), 0),
                     Attribute::texture_uv_from_sprite_sheet("tex_coords".to_string(), 1),
                 ],
-                Vec::new(),
                 vec![
-                    Uniform::rotation("rotation".to_string()),
-                    Uniform::size("sprite_size".to_string()),
+                    Uniform::aspect_ratio("u_aspect_ratio".to_string()),
+                ],
+                vec![
+                    Uniform::flip("u_flip".to_string()),
+                    Uniform::rotation("u_rotation".to_string()),
+                    Uniform::sprite_center("u_sprite_center".to_string()),
                     Uniform::texture_from_sprite_sheet("tex_sample".to_string()),
                 ],
             );
@@ -70,7 +73,7 @@ impl WindowManager {
             if let Err(err) = default_shader {
                 fragment = None;
                 vertex = None;
-                eprintln!("Error: Failed to link default shaders: {}", err);
+                eprintln!("Error: Failed to link default shaders:\n\t{}", err);
             }
             else {
                 let default_shader = default_shader.unwrap();

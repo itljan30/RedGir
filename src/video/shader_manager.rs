@@ -6,30 +6,39 @@ use std::ffi::{CString, NulError};
 use std::ptr;
 use std::string::FromUtf8Error;
 
+// FIXME make it so the shader doesn't have to take in the aspect ratio
 pub const DEFAULT_VERTEX_SHADER: &str = r#"
 #version 330 core
 
-layout (location = 0) in vec2 position;
+layout (location = 0) in vec2 u_position;
 layout (location = 1) in vec2 tex_coords;
 
-uniform float rotation;
-uniform vec2 sprite_size;
+uniform float u_rotation;
+uniform vec2 u_sprite_center;
+uniform float u_aspect_ratio;
+uniform vec2 u_flip;
 
 out vec2 frag_tex_coords;
 
 void main() {
-    vec2 centered_sprite = sprite_size * 0.5f;
+    vec2 new_position = u_position - u_sprite_center;
 
-    mat2 rotation_matrix = mat2(
-        cos(rotation), -sin(rotation),
-        sin(rotation), cos(rotation)
+    new_position *= mat2(
+        cos(u_rotation), -sin(u_rotation),
+        sin(u_rotation), cos(u_rotation)
     );
 
-    vec2 rotated_sprite = centered_sprite * rotation_matrix
+    if (u_flip.x == 1.0) {
+        new_position.x *= -1.0;
+    }
+    if (u_flip.y == 1.0) {
+        new_position.y *= -1.0;
+    }
 
-    vec2 final_position = position + rotated_sprite;
+    new_position.y *= u_aspect_ratio;
+    new_position += u_sprite_center;
 
-    gl_Position = vec4(final_position, 0.0f, 1.0f);
+    gl_Position = vec4(new_position, 0.0f, 1.0f);
     frag_tex_coords = tex_coords;
 }
 "#;
@@ -44,7 +53,6 @@ uniform sampler2D tex_sample;
 out vec4 frag_color;
 
 void main() {
-
     frag_color = texture(tex_sample, frag_tex_coords);
 }
 "#;
@@ -60,10 +68,10 @@ pub enum ShaderError {
 impl std::fmt::Display for ShaderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ShaderError::LinkingError(e)     => write!(f, "Shader Linking Error: {}", e),
-            ShaderError::CompilationError(e) => write!(f, "Shader Compilation Error: {}", e),
-            ShaderError::NulError(e)         => write!(f, "Nul byte found in shader source: {}", e),
-            ShaderError::FromUtf8Error(e)    => write!(f, "Invalid UTF-8 in shader log: {}", e),
+            ShaderError::LinkingError(e)     => write!(f, "LinkingError {}", e),
+            ShaderError::CompilationError(e) => write!(f, "CompilationError {}", e),
+            ShaderError::NulError(e)         => write!(f, "NulError {}", e),
+            ShaderError::FromUtf8Error(e)    => write!(f, "FromUtf8Error {}", e),
         }
     }
 }
@@ -174,6 +182,43 @@ impl Uniform {
         }
     }
 
+    pub fn time_since_initialization(name: String) -> Self {
+        Self {
+            name,
+            data: UniformData::Float(|engine: &Engine, _sprite: &Sprite| {
+                engine.time_since_initialization_seconds()
+            })
+        }
+    }
+
+    pub fn aspect_ratio(name: String) -> Self {
+        Self {
+            name, 
+            data: UniformData::Float(|engine: &Engine, _sprite: &Sprite| {
+                let (width, height) = engine.get_window_dimensions();
+                width as f32 / height as f32
+            })
+        }
+    }
+
+    /// A preset Uniform that retuns a FloatVec2 of [x, y] position of center of sprite in NDC
+    pub fn sprite_center(name: String) -> Self {
+        Self {
+            name,
+            data: UniformData::FloatVec2(|engine: &Engine, sprite: &Sprite| {
+                let (w_width, w_height) = engine.get_window_dimensions();
+                let (s_width, s_height) = (sprite.get_width(), sprite.get_height());
+                let (x, y) = sprite.get_position();
+                let aspect_ratio = w_width as f32 / w_height as f32;
+
+                [
+                    2.0 * (x as f32 + (s_width as f32 / 2.0)) / w_width as f32 - 1.0,
+                    2.0 * ((y as f32 + (s_height as f32 / 2.0)) / aspect_ratio) / w_height as f32 - 1.0
+                ]
+            }
+        )}
+    }
+
     /// A preset Uniform that returns a float representing the rotation of the sprite in radians.
     pub fn rotation(name: String) -> Self {
         Self {
@@ -279,16 +324,6 @@ impl Uniform {
         }
     }
 
-    pub fn size(name: String) -> Self {
-        Self {
-            name,
-            data: UniformData::FloatVec2(|_engine: &Engine, sprite: &Sprite| {
-                let (width, height) = (sprite.get_width(), sprite.get_height());
-                [width as f32, height as f32]
-            }),
-        }
-    }
-
     pub fn texture_from_sprite_sheet(name: String) -> Self {
         Self {
             name,
@@ -316,7 +351,7 @@ impl Attribute {
         }
     }
 
-    /// A preset Attribute that returns a [[f32; 2]; 4], or (x, y) position for each vertex.
+    /// A preset Attribute that returns a [[f32; 2]; 4], or (x, y) position for each vertex in NDC.
     pub fn position(name: String, location: u32) -> Self {
         Self::new(
             name,
@@ -329,23 +364,24 @@ impl Attribute {
                 let bottom_right = (pos.0 + s_width as i32, pos.1);
                 let top_left = (pos.0, pos.1 + s_height as i32);
                 let top_right = (pos.0 + s_width as i32, pos.1 + s_height as i32);
+                let aspect_ratio = w_width as f32 / w_height as f32;
 
                 [
                     [
                         2.0 * bottom_left.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * bottom_left.1 as f32 / w_height as f32 - 1.0
+                        2.0 * (bottom_left.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
                     ],
                     [
                         2.0 * bottom_right.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * bottom_right.1 as f32 / w_height as f32 - 1.0
+                        2.0 * (bottom_right.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
                     ],
                     [
                         2.0 * top_left.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * top_left.1 as f32 / w_height as f32 - 1.0
+                        2.0 * (top_left.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
                     ],
                     [
                         2.0 * top_right.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * top_right.1 as f32 / w_height as f32 - 1.0
+                        2.0 * (top_right.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
                     ],
                 ]
             }),
@@ -515,7 +551,7 @@ impl ShaderProgram {
                 let mut log_length = 0;
                 gl::GetProgramiv(id, gl::INFO_LOG_LENGTH, &mut log_length);
                 
-                let mut log = Vec::with_capacity(log_length as usize);
+                let mut log = vec![0u8; log_length as usize];
                 gl::GetProgramInfoLog(
                     id,
                     log_length,
@@ -619,7 +655,8 @@ fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLui
             let mut log_length = 0;
             gl::GetShaderiv(shader_id, gl::INFO_LOG_LENGTH, &mut log_length);
 
-            let mut log = Vec::with_capacity(log_length as usize);
+            let mut log = vec![0u8; log_length as usize];
+
             gl::GetShaderInfoLog(
                 shader_id,
                 log_length,

@@ -5,6 +5,7 @@ use crate::video::color::Color;
 use crate::video::sprite::{SpriteSheetId, SpriteSheetError, Sprite, SpriteId};
 use crate::video::shader_manager::{ShaderId, FragmentShader, VertexShader, ShaderError, Attribute, Uniform};
 use crate::video::glfw_window::GlfwWindow;
+use crate::utility::timer::Timer;
 
 use std::collections::HashMap;
 
@@ -93,6 +94,7 @@ pub struct Engine {
     window: WindowManager,
     input_manager: InputManager,
     audio_manager: AudioManager,
+    global_timer: Timer,
 }
 
 impl Default for Engine {
@@ -103,6 +105,7 @@ impl Default for Engine {
             window: WindowManager::new(window.window),
             audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
+            global_timer: Timer::new(),
         }
     }
 }
@@ -155,6 +158,7 @@ impl Engine {
             audio_manager: AudioManager::new(),
             input_manager: InputManager::new(window.glfw, window.events),
             window: WindowManager::new(window.window),
+            global_timer: Timer::new(),
         }
     }
 
@@ -170,6 +174,14 @@ impl Engine {
         shader: ShaderId,
     ) -> Result<SpriteId, SpriteSheetError> {
         self.window.add_quad(color, x_position, y_position, layer, width, height, shader)
+    }
+
+    pub fn time_since_initialization_miliseconds(&self) -> u128 {
+        self.global_timer.get_elapsed_milis()
+    }
+
+    pub fn time_since_initialization_seconds(&self) -> f32 {
+        self.global_timer.get_elapsed_seconds()
     }
 
     pub fn get_window_dimensions(&self) -> (i32, i32) {
