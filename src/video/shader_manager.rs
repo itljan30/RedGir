@@ -413,6 +413,14 @@ pub struct ShaderId {
     id: GLuint,
 }
 
+impl From<u32> for ShaderId {
+    fn from(value: u32) -> Self {
+        Self {
+            id: value,
+        }
+    }
+}
+
 impl GetId for ShaderId {
     type Id = u32;
     fn id(&self) -> u32 {

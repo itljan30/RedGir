@@ -176,7 +176,7 @@ impl Engine {
         self.window.add_quad(color, x_position, y_position, layer, width, height, shader)
     }
 
-    pub fn time_since_initialization_miliseconds(&self) -> u128 {
+    pub fn time_since_initialization_milis(&self) -> u128 {
         self.global_timer.get_elapsed_milis()
     }
 
@@ -197,20 +197,20 @@ impl Engine {
         self.window.add_sprite_sheet(path, sprite_width, sprite_height)
     }
 
-    pub fn add_shader_group(
+    pub fn add_shader_program(
         &mut self,
         vertex_shader: &VertexShader,
         fragment_shader: &FragmentShader,
         attributes: Vec<Attribute>,
         shared_uniforms: Vec<Uniform>,
-        per_sprite_uniform: Vec<Uniform>,
+        per_sprite_uniforms: Vec<Uniform>,
     ) -> Result<ShaderId, ShaderError> {
         self.window.add_shader_program(
             vertex_shader,
             fragment_shader,
             attributes,
             shared_uniforms,
-            per_sprite_uniform
+            per_sprite_uniforms
         )
     }
 

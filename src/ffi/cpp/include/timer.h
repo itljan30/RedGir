@@ -8,7 +8,7 @@ extern "C" {
     void TimerC_reset(TimerC *timer);
     float TimerC_getElapsedSeconds(const TimerC *timer);
     uint64_t TimerC_getElapsedMilis(const TimerC *timer);
-
+    void TimerC_free(TimerC *timer);
 }   
 
 class Timer {
@@ -21,5 +21,5 @@ public:
     uint64_t getElapsedMilis() const;
 
 private:
-    TimerC *timer;
+    TimerC *m_timer;
 };

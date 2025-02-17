@@ -42,6 +42,13 @@ pub struct SpriteSheetId {
     id: GLuint,
 }
 
+impl GetId for SpriteSheetId {
+    type Id = u32;
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
 pub struct SpriteSheet {
     sprites_uv: Vec<(f32, f32, f32, f32)>,
     texture_id: u32,
@@ -147,6 +154,13 @@ fn get_texture_id(width: u32, height: u32, pixel_data: Vec<u8>) -> Result<GLuint
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct SpriteId {
     id: u32,
+}
+
+impl GetId for SpriteId {
+    type Id = u32;
+    fn id(&self) -> u32 {
+        self.id
+    }
 }
 
 pub struct Sprite {
