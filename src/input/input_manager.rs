@@ -33,6 +33,15 @@ pub enum Key {
     None,
 }
 
+// could probably have used a macro like this
+// macro_rules! map_key {
+//     ( $( $glfw_var:ident => $key_var:ident ),* ) => {
+//         $(
+//             WindowEvent::Key(glfw::Key::$glfw_var, _, _, _) => key = Key::$key_var,
+//         )*
+//     }
+// }
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Action {
     Pressed,

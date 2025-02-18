@@ -6,7 +6,7 @@ mod utility;
 
 mod ffi;
 
-pub use engine::Engine;
+pub use engine::{Engine, GetId};
 pub use input::input_manager::{Key, Action};
 pub use video::color::Color;
 pub use video::sprite::{Sprite, SpriteSheet, SpriteId, SpriteSheetId, Flip, SpriteSheetError};

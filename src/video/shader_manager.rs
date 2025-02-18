@@ -93,6 +93,13 @@ pub struct VertexShader {
     id: GLuint,
 }
 
+impl GetId for VertexShader {
+    type Id = u32;
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
 impl Drop for VertexShader {
      fn drop(&mut self) {
         unsafe {
@@ -114,6 +121,13 @@ pub struct FragmentShader {
     id: GLuint,
 }
 
+impl GetId for FragmentShader {
+    type Id = u32;
+    fn id(&self) -> u32 {
+        self.id
+    }
+}
+
 impl Drop for FragmentShader {
      fn drop(&mut self) {
         unsafe {
@@ -130,42 +144,48 @@ impl FragmentShader {
     }
 }
 
+macro_rules! fn_ptr {
+    ($return_type:ty) => {
+        fn(&Engine, &Sprite) -> $return_type
+    }
+}
+
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 /// Attributes require data per vertex instead of per sprite.
 /// Therefore, a vec2 is really 4 vec2s, one per vertex
 /// Vertices should be returned in this order:
 /// [[bottom_left], [bottom_right], [top_left], [top_right]]
 pub enum AttributeData {
-    Float       (fn(&Engine, &Sprite) -> [f32; 4]),
-    FloatVec2   (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
-    FloatVec3   (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
-    FloatVec4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
-    Int         (fn(&Engine, &Sprite) -> [i32; 4]),
-    Bool        (fn(&Engine, &Sprite) -> [bool; 4]),
-    UInt        (fn(&Engine, &Sprite) -> [u32; 4]),
+    Float       (fn_ptr!([f32; 4])),
+    FloatVec2   (fn_ptr!([[f32; 2]; 4])),
+    FloatVec3   (fn_ptr!([[f32; 3]; 4])),
+    FloatVec4   (fn_ptr!([[f32; 4]; 4])),
+    Int         (fn_ptr!([i32; 4])),
+    Bool        (fn_ptr!([bool; 4])),
+    UInt        (fn_ptr!([u32; 4])),
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub enum UniformData {
-    Float       (fn(&Engine, &Sprite) -> f32),
-    FloatVec2   (fn(&Engine, &Sprite) -> [f32; 2]),
-    FloatVec3   (fn(&Engine, &Sprite) -> [f32; 3]),
-    FloatVec4   (fn(&Engine, &Sprite) -> [f32; 4]),
-    FloatMat2   (fn(&Engine, &Sprite) -> [[f32; 2]; 2]),
-    FloatMat3   (fn(&Engine, &Sprite) -> [[f32; 3]; 3]),
-    FloatMat4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
-    FloatMat2x3 (fn(&Engine, &Sprite) -> [[f32; 3]; 2]),
-    FloatMat2x4 (fn(&Engine, &Sprite) -> [[f32; 4]; 2]),
-    FloatMat3x2 (fn(&Engine, &Sprite) -> [[f32; 2]; 3]),
-    FloatMat3x4 (fn(&Engine, &Sprite) -> [[f32; 4]; 3]),
-    FloatMat4x2 (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
-    FloatMat4x3 (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
-    Int         (fn(&Engine, &Sprite) -> i32),
-    Bool        (fn(&Engine, &Sprite) -> bool),
-    UInt        (fn(&Engine, &Sprite) -> u32),
+    Float       (fn_ptr!(f32)),
+    FloatVec2   (fn_ptr!([f32; 2])),
+    FloatVec3   (fn_ptr!([f32; 3])),
+    FloatVec4   (fn_ptr!([f32; 4])),
+    FloatMat2   (fn_ptr!([[f32; 2]; 2])),
+    FloatMat3   (fn_ptr!([[f32; 3]; 3])),
+    FloatMat4   (fn_ptr!([[f32; 4]; 4])),
+    FloatMat2x3 (fn_ptr!([[f32; 3]; 2])),
+    FloatMat2x4 (fn_ptr!([[f32; 4]; 2])),
+    FloatMat3x2 (fn_ptr!([[f32; 2]; 3])),
+    FloatMat3x4 (fn_ptr!([[f32; 4]; 3])),
+    FloatMat4x2 (fn_ptr!([[f32; 2]; 4])),
+    FloatMat4x3 (fn_ptr!([[f32; 3]; 4])),
+    Int         (fn_ptr!(i32)),
+    Bool        (fn_ptr!(bool)),
+    UInt        (fn_ptr!(u32)),
     // TODO add a TextureId wrapper or something, u32 is OpenGL texture id
     /// NOTE u32 is OpenGL texture id
-    Sampler2D   (fn(&Engine, &Sprite) -> u32),
+    Sampler2D   (fn_ptr!(u32)),
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]

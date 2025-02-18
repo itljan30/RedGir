@@ -4,7 +4,7 @@
 use crate::engine::{EngineBuilder, Engine, GetId};
 use crate::video::sprite::{Flip, Sprite, SpriteSheet};
 use crate::video::shader_manager::{
-    Attribute, Uniform, AttributeData, UniformData, VertexShader, FragmentShader, ShaderProgram
+    Attribute, AttributeData, Uniform, UniformData, VertexShader, FragmentShader, ShaderProgram
 };
 use crate::video::color::Color;
 use crate::utility::timer::Timer;
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::ptr::null_mut;
 
 macro_rules! impl_from_trait_for_identical_enums {
-        ($original:ident, $ffi:ident, $( $variant:ident ),* ) => {
+    ($original:ident, $ffi:ident, $( $variant:ident ),* ) => {
         impl From<$original> for $ffi {
             fn from(value: $original) -> Self {
                 match value {
@@ -105,10 +105,12 @@ pub enum FlipC {
 
 impl_from_trait_for_identical_enums!{FlipC, Flip, None, FlipX, FlipY, FlipXY}
 
+#[repr(C)]
 pub struct SpriteC {
     sprite: *mut Sprite,
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_new(
     sprite_sheet: u32,
     sprite_sheet_index: usize,
@@ -132,6 +134,7 @@ pub extern "C" fn SpriteC_new(
     ))
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_free(sprite: *mut SpriteC) {
     unsafe {
         if let Some(sprite_c) = sprite.as_mut() {
@@ -143,6 +146,7 @@ pub extern "C" fn SpriteC_free(sprite: *mut SpriteC) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getRotation(sprite: *const SpriteC) -> f32 {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -151,6 +155,7 @@ pub extern "C" fn SpriteC_getRotation(sprite: *const SpriteC) -> f32 {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getFlip(sprite: *const SpriteC) -> FlipC {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -159,6 +164,7 @@ pub extern "C" fn SpriteC_getFlip(sprite: *const SpriteC) -> FlipC {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getSpriteSheetIndex(sprite: *const SpriteC) -> usize {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -167,6 +173,7 @@ pub extern "C" fn SpriteC_getSpriteSheetIndex(sprite: *const SpriteC) -> usize {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getSpriteSheet(sprite: *const SpriteC) -> u32 {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -190,6 +197,7 @@ impl Default for PositionC {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getPosition(sprite: *const SpriteC) -> PositionC {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -199,6 +207,7 @@ pub extern "C" fn SpriteC_getPosition(sprite: *const SpriteC) -> PositionC {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_translate(sprite: *mut SpriteC, dx: i32, dy: i32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -207,6 +216,7 @@ pub extern "C" fn SpriteC_translate(sprite: *mut SpriteC, dx: i32, dy: i32) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setId(sprite: *mut SpriteC, id: u32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -215,6 +225,7 @@ pub extern "C" fn SpriteC_setId(sprite: *mut SpriteC, id: u32) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getShader(sprite: *const SpriteC) -> u32 {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -223,6 +234,7 @@ pub extern "C" fn SpriteC_getShader(sprite: *const SpriteC) -> u32 {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setShader(sprite: *mut SpriteC, shader: u32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -231,6 +243,7 @@ pub extern "C" fn SpriteC_setShader(sprite: *mut SpriteC, shader: u32) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setTexture(sprite: *mut SpriteC, sprite_sheet: u32, index: usize) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -239,6 +252,7 @@ pub extern "C" fn SpriteC_setTexture(sprite: *mut SpriteC, sprite_sheet: u32, in
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setHeight(sprite: *mut SpriteC, height: u32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -247,6 +261,7 @@ pub extern "C" fn SpriteC_setHeight(sprite: *mut SpriteC, height: u32) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setWidth(sprite: *mut SpriteC, width: u32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -255,6 +270,7 @@ pub extern "C" fn SpriteC_setWidth(sprite: *mut SpriteC, width: u32) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setPosition(sprite: *mut SpriteC, x: i32, y: i32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -263,6 +279,7 @@ pub extern "C" fn SpriteC_setPosition(sprite: *mut SpriteC, x: i32, y: i32) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_scale(sprite: *mut SpriteC, scale_x: f32, scale_y: f32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -271,6 +288,7 @@ pub extern "C" fn SpriteC_scale(sprite: *mut SpriteC, scale_x: f32, scale_y: f32
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setRotation(sprite: *mut SpriteC, rotation: f32) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -279,6 +297,7 @@ pub extern "C" fn SpriteC_setRotation(sprite: *mut SpriteC, rotation: f32) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_setFlip(sprite: *mut SpriteC, flip: FlipC) {
     unsafe {
         if let Some(sprite) = sprite.as_mut().and_then(|s| s.sprite.as_mut()) {
@@ -287,6 +306,7 @@ pub extern "C" fn SpriteC_setFlip(sprite: *mut SpriteC, flip: FlipC) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getLayer(sprite: *const SpriteC) -> i32 {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -295,6 +315,7 @@ pub extern "C" fn SpriteC_getLayer(sprite: *const SpriteC) -> i32 {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getHeight(sprite: *const SpriteC) -> u32 {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -303,6 +324,7 @@ pub extern "C" fn SpriteC_getHeight(sprite: *const SpriteC) -> u32 {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteC_getWidth(sprite: *const SpriteC) -> u32 {
     unsafe {
         if let Some(sprite) = sprite.as_ref().and_then(|s| s.sprite.as_ref()) {
@@ -335,6 +357,7 @@ pub struct SpriteSheetC {
     sprite_sheet: *mut SpriteSheet,
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteSheetC_free(sheet: *mut SpriteSheetC) {
     unsafe {
         if let Some(sheet_c) = sheet.as_mut() {
@@ -346,6 +369,7 @@ pub extern "C" fn SpriteSheetC_free(sheet: *mut SpriteSheetC) {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteSheetC_getUV(sheet: *const SpriteSheetC, index: usize) -> UVCoordsC {
     unsafe {
         if let Some(sheet) = sheet.as_ref().and_then(|s| s.sprite_sheet.as_ref()) {
@@ -360,6 +384,7 @@ pub extern "C" fn SpriteSheetC_getUV(sheet: *const SpriteSheetC, index: usize) -
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteSheetC_getTexture(sheet: *const SpriteSheetC) -> u32 {
     unsafe {
         if let Some(sheet) = sheet.as_ref().and_then(|s| s.sprite_sheet.as_ref()) {
@@ -368,6 +393,7 @@ pub extern "C" fn SpriteSheetC_getTexture(sheet: *const SpriteSheetC) -> u32 {
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteSheetC_fromImage(path: *const c_char, sprite_width: u32, sprite_height: u32) -> *mut SpriteSheetC {
     unsafe {
         if let Ok(path) = CStr::from_ptr(path).to_str() {
@@ -382,6 +408,7 @@ pub extern "C" fn SpriteSheetC_fromImage(path: *const c_char, sprite_width: u32,
     }
 }
 
+#[no_mangle]
 pub extern "C" fn SpriteSheetC_fromColor(r: u8, g: u8, b: u8, a: u8) -> *mut SpriteSheetC {
     Box::into_raw(Box::new(
         SpriteSheetC {
@@ -469,12 +496,12 @@ pub struct UniformDataC {
 }
 
 #[repr(C)]
-pub struct WindowDimensions {
+pub struct WindowDimensionsC {
     x: i32,
     y: i32,
 }
 
-impl Default for WindowDimensions {
+impl Default for WindowDimensionsC {
     fn default() -> Self {
         Self {
             x: 0,
@@ -662,12 +689,12 @@ pub extern "C" fn EngineC_timeSinceInitializationSeconds(engine: *const EngineC)
 }
 
 #[no_mangle]
-pub extern "C" fn EngineC_getWindowDimensions(engine: *const EngineC) -> WindowDimensions {
+pub extern "C" fn EngineC_getWindowDimensions(engine: *const EngineC) -> WindowDimensionsC {
     unsafe {
         if let Some(engine) = engine.as_ref().and_then(|e| e.engine.as_ref()) {
             let (x, y) = engine.get_window_dimensions();
-            WindowDimensions { x, y }
-        } else { WindowDimensions::default() }
+            WindowDimensionsC { x, y }
+        } else { WindowDimensionsC::default() }
     }
 }
 
@@ -691,17 +718,210 @@ pub extern "C" fn EngineC_addSpriteSheet(
 }
 
 #[no_mangle]
-pub extern "C" fn EngineC_addShaderProgram() {} // TODO
+pub extern "C" fn EngineC_addShaderProgram(
+    // vertex_shader: u32,
+    // fragment_shader: u32,
+    // attributes: Vec<AttributeC>,
+    // global_uniforms: Vec<UniformC>,
+    // instance_uniforms: Vec<UniformC>,
+) {} // TODO
 
 #[no_mangle]
-pub extern "C" fn EngineC_getSprite() {} // TODO
+pub extern "C" fn EngineC_getSprite(engine: *mut EngineC, sprite_id: u32) -> *mut SpriteC {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            if let Some(sprite) = engine.get_sprite(sprite_id.into()) {
+                Box::into_raw(Box::new(SpriteC {
+                    sprite: sprite as *mut _,
+                }))
+            } else { null_mut() }
+        } else { null_mut() }
+    }
+}
 
+// TODO complicated to convert &HashMap into C compatible, low priority function right now, skipping
+// #[no_mangle]
+// pub extern "C" fn EngineC_getAllSprites(engine: *const EngineC) {
+//     unsafe {
+//         if let Some(engine) = engine.as_ref().and_then(|e| e.engine.as_ref()) {
+//
+//         }
+//     }
+// }
 
+#[no_mangle]
+pub extern "C" fn EngineC_addSprite(
+    engine: *mut EngineC,
+    sprite_sheet: u32,
+    sprite_index: usize,
+    x_position: i32,
+    y_position: i32,
+    layer: i32,
+    width: u32,
+    height: u32,
+    shader: u32
+) -> u32 {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.add_sprite(
+                sprite_sheet.into(),
+                sprite_index,
+                x_position,
+                y_position,
+                layer,
+                width,
+                height,
+                shader.into()
+            ).id()
+        } else { u32::MAX }
+    }
+}
 
+#[no_mangle]
+pub extern "C" fn EngineC_removeSprite(engine: *mut EngineC, sprite_id: u32) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.remove_sprite(sprite_id.into())
+        }
+    }
+}
 
+#[no_mangle]
+pub extern "C" fn EngineC_toggleFullscreen(engine: *mut EngineC) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.toggle_fullscreen()
+        }
+    }
+}
 
+#[no_mangle]
+pub extern "C" fn EngineC_setWindowSize(engine: *mut EngineC, width: i32, height: i32) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.set_window_size(width, height);
+        }
+    }
+}
 
+#[no_mangle]
+pub extern "C" fn EngineC_toggleShowFps(engine: *mut EngineC) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.toggle_show_fps();
+        }
+    }
+}
 
+#[no_mangle]
+pub extern "C" fn EngineC_setFps(engine: *mut EngineC, target_fps: f32) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.set_fps(target_fps);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_stop(engine: *mut EngineC) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.stop();
+        }
+    }
+}
+
+// TODO
+#[no_mangle]
+pub extern "C" fn EngineC_getKeyEvents(_engine: *mut EngineC) {
+    todo!()
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_isRunning(engine: *const EngineC) -> bool {
+    unsafe {
+        if let Some(engine) = engine.as_ref().and_then(|e| e.engine.as_ref()) {
+            engine.is_running()
+        } else { false }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_toggleBorder(engine: *mut EngineC) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.toggle_border()
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_getDefaultFragmentShader(engine: *mut EngineC) -> u32 {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            if let Some(shader) = engine.get_default_fragment_shader() {
+                shader.id()
+            } else { u32::MAX }
+        } else { u32::MAX }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_getDefaultVertexShader(engine: *mut EngineC) -> u32 {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            if let Some(shader) = engine.get_default_vertex_shader() {
+                shader.id()
+            } else { u32::MAX }
+        } else { u32::MAX }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_drawFrame(engine: *mut EngineC) {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            engine.draw_frame();
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_getUVFromSpriteSheet(engine: *const EngineC, sprite_sheet: u32, index: usize) -> UVCoordsC {
+    unsafe {
+        if let Some(engine) = engine.as_ref().and_then(|e| e.engine.as_ref()) {
+            if let Some((min_u, min_v, max_u, max_v)) = engine.get_uv_from_sprite_sheet(sprite_sheet.into(), index) {
+                UVCoordsC {
+                    min_u,
+                    min_v,
+                    max_u,
+                    max_v,
+                }
+            } else { UVCoordsC::default() }
+        } else { UVCoordsC::default() }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_getTextureFromSpriteSheet(engine: *const EngineC, sprite_sheet: u32) -> u32 {
+    unsafe {
+        if let Some(engine) = engine.as_ref().and_then(|e| e.engine.as_ref()) {
+            engine.get_texture_from_sprite_sheet(sprite_sheet.into()).unwrap_or(u32::MAX)
+        } else { u32::MAX }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn EngineC_free(engine: *mut EngineC) {
+    unsafe {
+        if let Some(engine_c) = engine.as_mut() {
+            if let Some(inner) = engine_c.engine.as_mut() {
+                drop(Box::from_raw(inner));
+            }
+            drop(Box::from_raw(engine_c));
+        }
+    }
+}
 
 #[repr(C)]
 pub struct TimerC {
