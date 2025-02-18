@@ -5,10 +5,10 @@
 extern "C" {
     typedef struct TimerC TimerC;
     TimerC *TimerC_new();
+    void TimerC_free(TimerC *timer);
     void TimerC_reset(TimerC *timer);
     float TimerC_getElapsedSeconds(const TimerC *timer);
     uint64_t TimerC_getElapsedMilis(const TimerC *timer);
-    void TimerC_free(TimerC *timer);
 }   
 
 class Timer {

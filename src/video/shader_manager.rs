@@ -335,6 +335,9 @@ impl Uniform {
     }
 }
 
+/// Attributes are applied per vertex, so a Vec2 should return a [[f32; 2]; 4], one Vec2 per vertex
+/// of the quad. They should be returned in the order of:
+/// [bottom_left], [bottom_right], [top_left], [top_right]
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Attribute {
     name: String,

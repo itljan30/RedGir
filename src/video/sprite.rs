@@ -49,6 +49,14 @@ impl GetId for SpriteSheetId {
     }
 }
 
+impl From<u32> for SpriteSheetId {
+    fn from(value: u32) -> Self {
+        Self {
+            id: value,
+        }
+    }
+}
+
 pub struct SpriteSheet {
     sprites_uv: Vec<(f32, f32, f32, f32)>,
     texture_id: u32,
@@ -58,6 +66,15 @@ impl GetId for SpriteSheet {
     type Id = SpriteSheetId;
     fn id(&self) -> SpriteSheetId {
         SpriteSheetId { id: self.texture_id }
+    }
+}
+
+impl Default for SpriteSheet {
+    fn default() -> Self {
+        Self {
+            sprites_uv: Vec::new(),
+            texture_id: u32::MAX,
+        }
     }
 }
 
@@ -160,6 +177,14 @@ impl GetId for SpriteId {
     type Id = u32;
     fn id(&self) -> u32 {
         self.id
+    }
+}
+
+impl From<u32> for SpriteId {
+    fn from(value: u32) -> Self {
+        Self {
+            id: value,
+        }
     }
 }
 
@@ -271,7 +296,7 @@ impl Sprite {
         self
     }
 
-    pub fn set_scale(&mut self, scale_x: f32, scale_y: f32) -> &mut Self {
+    pub fn scale(&mut self, scale_x: f32, scale_y: f32) -> &mut Self {
         self.width *= scale_x;
         self.height *= scale_y;
         self
