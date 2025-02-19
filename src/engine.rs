@@ -260,12 +260,17 @@ impl Engine {
         self.window.shutdown();
     }
 
-    pub fn get_key_events(&mut self) -> HashMap<Key, Action> {
-        return self.input_manager.read_events();
+    pub fn get_key_state(&self, key: Key) -> Action {
+        self.input_manager.get_key_state(key)
+    }
+
+    /// Returns a clone of the internal hashmap, prefer to use `Engine::get_key_state()` if possible.
+    pub fn get_all_key_states(&self) -> HashMap<Key, Action> {
+        self.input_manager.get_all_key_states()
     }
 
     pub fn is_running(&self) -> bool {
-        return self.window.is_running();
+        self.window.is_running()
     }
 
     pub fn toggle_border(&mut self) {
@@ -281,6 +286,7 @@ impl Engine {
     }
 
     pub fn draw_frame(&mut self) {
+        self.input_manager.read_events();
         unsafe {
             // NOTE In order for shader attribute and uniform callbacks to have access to relevant data
             // inside the engine we need to pass a reference to the engine to this funcion. Rust

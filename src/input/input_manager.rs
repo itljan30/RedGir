@@ -50,6 +50,12 @@ pub enum Action {
     None,
 }
 
+impl Default for Action {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 pub struct InputManager {
     key_states: HashMap<Key, Action>,
     glfw_context: Glfw,
@@ -65,7 +71,15 @@ impl InputManager {
         }
     }
 
-    pub fn read_events(&mut self) -> HashMap<Key, Action> {
+    pub fn get_key_state(&self, key: Key) -> Action {
+        self.key_states.get(&key).unwrap_or(&Action::None).clone()
+    }
+
+    pub fn get_all_key_states(&self) -> HashMap<Key, Action> {
+        self.key_states.clone()
+    }
+
+    pub fn read_events(&mut self) {
         self.glfw_context.poll_events();
 
         for value in self.key_states.values_mut() {
@@ -223,6 +237,5 @@ impl InputManager {
                 self.key_states.insert(key, action);
             }
         }
-        self.key_states.clone()
     }
 }

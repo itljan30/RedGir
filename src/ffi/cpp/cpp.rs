@@ -92,6 +92,12 @@ pub enum ActionC {
     None,
 }
 
+impl Default for ActionC {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 impl_from_trait_for_identical_enums!{ActionC, Action, Pressed, Released, Held, None}
 
 #[repr(C)]
@@ -831,10 +837,13 @@ pub extern "C" fn EngineC_stop(engine: *mut EngineC) {
     }
 }
 
-// TODO
 #[no_mangle]
-pub extern "C" fn EngineC_getKeyEvents(_engine: *mut EngineC) {
-    todo!()
+pub extern "C" fn EngineC_getKeyState(engine: *const EngineC, key: KeyC) -> ActionC {
+    unsafe {
+        if let Some(engine) = engine.as_ref().and_then(|e| e.engine.as_ref()) {
+            engine.get_key_state(key.into()).into()
+        } else { ActionC::default() }
+    }
 }
 
 #[no_mangle]

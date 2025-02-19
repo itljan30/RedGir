@@ -1,5 +1,6 @@
 #include "engine.h"
 #include "color.h"
+#include "ffi.h"
 #include "sprite.h"
 
 #include <cstddef>
@@ -72,6 +73,18 @@ Engine::Engine(EngineC *engine) : m_engine(engine) {
     if (!m_engine) {
         throw std::runtime_error("Failed to create Engine instance");
     }
+}
+
+static inline KeyC keyToKeyC(Key key) {
+    return static_cast<KeyC>(key);
+}
+
+static inline Action actionCToAction(ActionC action) {
+    return static_cast<Action>(action);
+}
+
+Action Engine::getKeyState(Key key) const {
+    return actionCToAction(EngineC_getKeyState(m_engine, keyToKeyC(key)));
 }
 
 bool Engine::isRunning() const {

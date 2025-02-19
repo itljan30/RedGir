@@ -7,6 +7,30 @@
 #include <cstdint>
 #include <string>
 
+// FIXME this is the 4th time I've redefined this enum so it's very fragile. It should be fine for now,
+// since it's pretty stable, but could be the source of annoying bugs in the future.
+enum class Key {
+    MouseLeft, MouseRight, MouseMiddle, MouseScrollUp, MouseScrollDown,
+    A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 
+    Period, Comma, ForwardSlash, BackSlash, Space, Equals, Minus, Grave,
+    Enter, Escape, Tab, Backspace, LeftBracket, RightBracket, Delete, Apostrophe, SemiColon,
+    Number1, Number2, Number3, Number4, Number5, Number6, Number7, Number8, Number9, Number0,
+    NumPad1, NumPad2, NumPad3, NumPad4, NumPad5, NumPad6, NumPad7, NumPad8, NumPad9, NumPad0,
+    NumPadDecimal, NumPadEquals, NumPadEnter, NumPadMinus, NumPadAdd, NumPadDivide, NumPadMultiply,
+    LeftShift, RightShift, LeftControl, RightControl, LeftAlt, RightAlt, LeftSuper, RightSuper,
+    CapsLock, NumLock, ScrollLock,
+    ArrowRight, ArrowLeft, ArrowDown, ArrowUp, Home, End, PageUp, PageDown, Insert,
+    F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+    None,
+};
+
+enum class Action {
+    Pressed,
+    Released,
+    Held,
+    None,
+};
+
 class EngineBuilder;
 
 class Engine {
@@ -33,6 +57,8 @@ public:
     void toggleBorder();
     void drawFrame();
 
+
+    Action getKeyState(Key key) const;
     bool isRunning() const;
     Sprite getSprite(SpriteSheetId sheet, size_t index) const;
     uint32_t getTextureFromSpriteSheet(SpriteSheetId sheet) const;
