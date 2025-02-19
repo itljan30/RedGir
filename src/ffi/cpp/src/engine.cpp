@@ -78,10 +78,9 @@ bool Engine::isRunning() const {
     return EngineC_isRunning(m_engine);
 }
 
-// TODO
-// Sprite Engine::getSprite(SpriteSheetId sheet, size_t index) const {
-//     return Sprite { EngineC_getSprite(m_engine, sheet.id, index) };
-// }
+Sprite Engine::getSprite(SpriteSheetId sheet, size_t index) const {
+    return Sprite { EngineC_getSprite(m_engine, sheet.id, index) };
+}
 
 uint32_t Engine::getTextureFromSpriteSheet(SpriteSheetId sheet) const {
     return EngineC_getTextureFromSpriteSheet(m_engine, sheet.id);

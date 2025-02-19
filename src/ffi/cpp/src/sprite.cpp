@@ -56,6 +56,12 @@ uint32_t SpriteSheet::getTexture() const {
     return SpriteSheetC_getTexture(m_sheet);
 }
 
+Sprite::Sprite(SpriteC *sprite) : m_sprite(sprite) {
+    if (!m_sprite) {
+        throw std::runtime_error("Failed to create Sprite instance");
+    }
+}
+
 Sprite::Sprite(
     SpriteSheetId spriteSheet,
     size_t index,
