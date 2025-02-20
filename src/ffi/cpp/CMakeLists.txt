@@ -6,6 +6,7 @@ add_library(
     src/sprite.cpp
 )
 
+# FIXME Make it so that functions inside _include do not clutter the autocomplete
 target_include_directories(
     RedGir_cpp 
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
