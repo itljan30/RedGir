@@ -1,11 +1,11 @@
 [package]
-name = "redgir"
+name = "RedGir"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "redgir"
-crate-type = ["staticlib"]
+name = "RedGir"
+crate-type = ["cdylib"]
 
 [features]
 default = []
@@ -13,10 +13,6 @@ cpp-bindings = []
 python-bindings = []
 
 [dependencies]
-cmake = "0.1.54"
 gl = "0.14.0"
 glfw = "0.59.0"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
-
-[build-dependencies]
-cmake = "0.1"

@@ -1,5 +1,5 @@
 add_library(
-    RedGir_cpp STATIC
+    RedGir_cpp SHARED
     src/engine.cpp
     src/timer.cpp
     src/color.cpp
@@ -8,7 +8,8 @@ add_library(
 
 target_include_directories(
     RedGir_cpp 
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RedGir
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/_include
 )
 
 set_target_properties(
