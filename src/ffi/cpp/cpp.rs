@@ -975,14 +975,12 @@ pub extern "C" fn TimerC_getElapsedMilis(timer: *const TimerC) -> u64 {
 
 #[no_mangle]
 pub extern "C" fn TimerC_free(timer: *mut TimerC) {
-    if timer.is_null() {
-        return;
-    }
-
     unsafe {
-        if let Some(timer) = timer.as_mut().and_then(|t| t.timer.as_mut()) {
-            drop(Box::from_raw(timer));
+        if let Some(timer_c) = timer.as_mut() {
+            if let Some(inner) = timer_c.timer.as_mut() {
+                drop(Box::from_raw(inner));
+            }
+            drop(Box::from_raw(timer_c));
         }
-        drop(Box::from_raw(timer));
     }
 }

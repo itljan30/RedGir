@@ -3,6 +3,21 @@
 RedGir is a minimalistic 2d game engine designed to abstract away the low-level details of graphics, audio, and input management.
 RedGir utilizes Rust's glfw and gl crates to handle graphics in a flexible and portable manner.
 
+## Installation
+### Rust
+```bash
+cargo build --release
+```
+### C++
+From the root of the project:
+```bash
+cargo build --features cpp-bindings --release
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build .
+```
+The library can be found inside build/lib
+
 ## Features
 ### Core Features
 - **Graphics Management:**

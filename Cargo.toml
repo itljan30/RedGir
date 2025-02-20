@@ -3,6 +3,10 @@ name = "redgir"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "redgir"
+crate-type = ["staticlib"]
+
 [features]
 default = []
 cpp-bindings = []
