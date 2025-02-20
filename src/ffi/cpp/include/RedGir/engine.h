@@ -1,11 +1,16 @@
 #pragma once
 #include "ffi.h"
-#include "color.h"
-#include "sprite.h"
+#include "RedGir/color.h"
+#include "RedGir/sprite.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
+
+struct EngineBuilderC;
+struct EngineC;
+enum class KeyC;
+enum class ActionC;
 
 // FIXME this is the 4th time I've redefined this enum so it's very fragile. It should be fine for now,
 // since it's pretty stable, but could be the source of annoying bugs in the future.

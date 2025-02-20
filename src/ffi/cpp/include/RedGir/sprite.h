@@ -1,13 +1,17 @@
 #pragma once
 
 #include "ffi.h"
-#include "shader.h"
-#include "color.h"
+
+#include "RedGir/shader.h"
+#include "RedGir/color.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <tuple>
 #include <string>
+
+struct SpriteSheetC;
+struct SpriteC;
 
 struct SpriteSheetId {
     uint32_t id;

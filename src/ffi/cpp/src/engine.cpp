@@ -1,7 +1,8 @@
-#include "engine.h"
-#include "color.h"
 #include "ffi.h"
-#include "sprite.h"
+
+#include "RedGir/engine.h"
+#include "RedGir/color.h"
+#include "RedGir/sprite.h"
 
 #include <cstddef>
 #include <cstdint>

@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+struct TimerC;
+
 class Timer {
 public: 
     Timer();

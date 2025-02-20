@@ -1,6 +1,6 @@
-#include "sprite.h"
-#include "shader.h"
-#include "color.h"
+#include "RedGir/sprite.h"
+#include "RedGir/shader.h"
+#include "RedGir/color.h"
 
 #include <cstdint>
 #include <cstddef>
