@@ -107,6 +107,7 @@ extern "C" {
     void EngineBuilderC_setWindowName(EngineBuilderC *engineBuilder, const char *name);
 
     EngineBuilderC *EngineC_new();
+    void EngineC_free(EngineC *engine);
     uint32_t EngineC_defaultShader(const EngineC *engine);
     uint32_t EngineC_addQuad(
         EngineC *engine, uint8_t r, uint8_t g, uint8_t b, uint8_t a,

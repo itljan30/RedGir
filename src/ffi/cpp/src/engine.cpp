@@ -75,6 +75,10 @@ Engine::Engine(EngineC *engine) : m_engine(engine) {
     }
 }
 
+Engine::~Engine() {
+    EngineC_free(m_engine);
+}
+
 static inline KeyC keyToKeyC(Key key) {
     return static_cast<KeyC>(key);
 }

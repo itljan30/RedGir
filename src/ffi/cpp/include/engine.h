@@ -37,7 +37,7 @@ class Engine {
 public:
     ~Engine();
 
-    EngineBuilder create();
+    static EngineBuilder create();
     SpriteId addQuad(
         Color color, int32_t xPos, int32_t yPos, int32_t layer,
         uint32_t width, uint32_t height, ShaderId shader
