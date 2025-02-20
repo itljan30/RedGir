@@ -8,7 +8,7 @@ add_library(
 
 target_include_directories(
     RedGir_cpp 
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RedGir
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/_include
 )
 
