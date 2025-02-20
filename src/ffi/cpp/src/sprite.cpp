@@ -8,24 +8,6 @@
 #include <tuple>
 #include <string>
 
-static FlipC flipToFlipC(Flip flip) {
-    switch (flip) {
-        case Flip::None:   return FlipC::None;
-        case Flip::FlipX:  return FlipC::FlipX;
-        case Flip::FlipY:  return FlipC::FlipY;
-        case Flip::FlipXY: return FlipC::FlipXY;
-    }
-}
-
-static Flip flipCToFlip(FlipC flipC) {
-    switch (flipC) {
-        case FlipC::None:   return Flip::None;
-        case FlipC::FlipX:  return Flip::FlipX;
-        case FlipC::FlipY:  return Flip::FlipY;
-        case FlipC::FlipXY: return Flip::FlipXY;
-    }
-}
-
 SpriteSheet::SpriteSheet(SpriteSheetC *sheet) : m_sheet(sheet) {
     if (!m_sheet) {
         std::runtime_error("Failed to create SpriteSheet instance");
@@ -87,7 +69,7 @@ float Sprite::getRotation() const {
 }
 
 Flip Sprite::getFlip() const {
-    return flipCToFlip(SpriteC_getFlip(m_sprite));
+    return static_cast<Flip>(SpriteC_getFlip(m_sprite));
 }
 
 size_t Sprite::getSpriteSheetIndex() const {
@@ -165,6 +147,6 @@ Sprite &Sprite::setRotation(float rotation) {
 }
 
 Sprite &Sprite::setFlip(Flip flip) {
-    SpriteC_setFlip(m_sprite, flipToFlipC(flip));
+    SpriteC_setFlip(m_sprite, static_cast<FlipC>(flip));
     return *this;
 }

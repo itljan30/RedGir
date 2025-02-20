@@ -1,20 +1,3 @@
-if(DEFINED CMAKE_BUILD_TYPE)
-    string(TOLOWER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
-    if(BUILD_TYPE STREQUAL "release")
-        set(REDGIR_DIR ${CMAKE_SOURCE_DIR}/target/release)
-    else()
-        set(REDGIR_DIR ${CMAKE_SOURCE_DIR}/target/debug)
-    endif()
-else()
-    set(REDGIR_DIR ${CMAKE_SOURCE_DIR}/target/debug)
-endif()
-
-find_library(REDGIR NAMES redgir PATHS ${REDGIR_DIR} NO_DEFAULT_PATH)
-
-if(NOT REDGIR)
-    message(FATAL_ERROR "Could not find RedGir in ${REDGIR_DIR}")
-endif()
-
 add_library(
     RedGir_cpp STATIC
     src/engine.cpp
@@ -25,8 +8,7 @@ add_library(
 
 target_include_directories(
     RedGir_cpp 
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/RedGir
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/_include
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 set_target_properties(
@@ -35,4 +17,5 @@ set_target_properties(
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
-target_link_libraries(RedGir_cpp PRIVATE ${REDGIR})
+add_dependencies(RedGir_cpp RedGir_rs)
+target_link_libraries(RedGir_cpp PRIVATE ${REDGIR_LIB})

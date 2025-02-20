@@ -11,7 +11,6 @@ cargo build --release
 ### C++
 From the root of the project:
 ```bash
-cargo build --features cpp-bindings --release
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
