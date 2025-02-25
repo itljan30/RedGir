@@ -18,13 +18,6 @@ extern "C" {
         float maxV;
     } UVCoordsC;
 
-    typedef struct SpriteSheetC SpriteSheetC;
-    UVCoordsC SpriteSheetC_getUV(const SpriteSheetC *sheet, size_t index);
-    uint32_t SpriteSheetC_getTexture(const SpriteSheetC *sheet);
-    SpriteSheetC *SpriteSheetC_fromImage(const char *path, uint32_t spriteWidth, uint32_t spriteHeight);
-    SpriteSheetC *SpriteSheetC_fromColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-    void SpriteSheetC_free(SpriteSheetC *sheet);
-
     typedef enum FlipC {
         None,
         FlipX,
@@ -38,11 +31,6 @@ extern "C" {
     } PositionC;
 
     typedef struct SpriteC SpriteC;
-    SpriteC *SpriteC_new(
-        uint32_t spriteSheet, size_t spriteSheetIndex, 
-        int32_t xPosition, int32_t yPosition, int32_t layer, 
-        uint32_t width, uint32_t height, uint32_t shader
-    );
     void SpriteC_free(SpriteC *sprite);
     float SpriteC_getRotation(const SpriteC *sprite);
     FlipC SpriteC_getFlip(const SpriteC *sprite);

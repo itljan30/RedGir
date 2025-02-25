@@ -69,6 +69,7 @@ impl GetId for SpriteSheet {
     }
 }
 
+// I don't think this is needed
 impl Default for SpriteSheet {
     fn default() -> Self {
         Self {

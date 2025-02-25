@@ -1,60 +1,12 @@
 #include "RedGir/sprite.h"
 #include "RedGir/shader.h"
-#include "RedGir/color.h"
 
 #include <cstdint>
 #include <cstddef>
 #include <stdexcept>
 #include <tuple>
-#include <string>
-
-SpriteSheet::SpriteSheet(SpriteSheetC *sheet) : m_sheet(sheet) {
-    if (!m_sheet) {
-        std::runtime_error("Failed to create SpriteSheet instance");
-    }
-}
-
-SpriteSheet::~SpriteSheet() {
-    SpriteSheetC_free(m_sheet);
-}
-
-SpriteSheet SpriteSheet::fromImage(const std::string &path, uint32_t spriteWidth, uint32_t spriteHeight) {
-    SpriteSheetC *sheet = SpriteSheetC_fromImage(path.c_str(), spriteWidth, spriteHeight);
-    return SpriteSheet(sheet);
-}
-
-SpriteSheet SpriteSheet::fromColor(Color color) {
-    auto [r, g, b, a] = color.toTuple();
-    SpriteSheetC *sheet = SpriteSheetC_fromColor(r, g, b, a);
-    return SpriteSheet(sheet);
-}
-
-std::tuple<float, float, float, float> SpriteSheet::getUV(size_t index) const {
-    UVCoordsC coords = SpriteSheetC_getUV(m_sheet, index);
-    return std::tuple<float, float, float, float>(coords.minU, coords.minV, coords.maxU, coords.maxV);
-}
-
-uint32_t SpriteSheet::getTexture() const {
-    return SpriteSheetC_getTexture(m_sheet);
-}
 
 Sprite::Sprite(SpriteC *sprite) : m_sprite(sprite) {
-    if (!m_sprite) {
-        throw std::runtime_error("Failed to create Sprite instance");
-    }
-}
-
-Sprite::Sprite(
-    SpriteSheetId spriteSheet,
-    size_t index,
-    int32_t xPosition,
-    int32_t yPosition,
-    int32_t layer,
-    uint32_t width,
-    uint32_t height,
-    ShaderId shader
-) {
-    m_sprite = SpriteC_new(spriteSheet.id, index, xPosition, yPosition, layer, width, height, shader.id);
     if (!m_sprite) {
         throw std::runtime_error("Failed to create Sprite instance");
     }

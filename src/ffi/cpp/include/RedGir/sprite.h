@@ -3,14 +3,11 @@
 #include "ffi.h"
 
 #include "RedGir/shader.h"
-#include "RedGir/color.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <tuple>
-#include <string>
 
-struct SpriteSheetC;
 struct SpriteC;
 
 struct SpriteSheetId {
@@ -26,24 +23,6 @@ enum class Flip {
     FlipX,
     FlipY,
     FlipXY,
-};
-
-class SpriteSheet {
-public:
-    ~SpriteSheet();
-
-    static SpriteSheet fromImage(const std::string &path, uint32_t spriteWidth, uint32_t spriteHeight);
-    static SpriteSheet fromColor(Color color);
-
-    std::tuple<float, float, float, float> getUV(size_t index) const;
-    uint32_t getTexture() const;
-
-private: 
-    SpriteSheet(SpriteSheetC *sheet);
-
-private:
-    friend class Engine;
-    SpriteSheetC *m_sheet;
 };
 
 class Sprite {

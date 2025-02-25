@@ -117,36 +117,9 @@ pub struct SpriteC {
 }
 
 #[no_mangle]
-pub(crate) extern "C" fn SpriteC_new(
-    sprite_sheet: u32,
-    sprite_sheet_index: usize,
-    x_position: i32,
-    y_position: i32,
-    layer: i32,
-    width: u32,
-    height: u32,
-    shader: u32,
-) -> *mut SpriteC {
-    Box::into_raw(Box::new(
-        SpriteC {
-            sprite: Box::into_raw(Box::new(
-                Sprite::new(
-                    sprite_sheet.into(), sprite_sheet_index,
-                    x_position, y_position, layer,
-                    width, height, shader.into()
-                )
-            ))
-        }
-    ))
-}
-
-#[no_mangle]
 pub(crate) extern "C" fn SpriteC_free(sprite: *mut SpriteC) {
     unsafe {
         if let Some(sprite_c) = sprite.as_mut() {
-            if let Some(inner_sprite) = sprite_c.sprite.as_mut() {
-                drop(Box::from_raw(inner_sprite));
-            }
             drop(Box::from_raw(sprite_c));
         }
     }
@@ -359,73 +332,6 @@ impl Default for UVCoordsC {
 }
  
 #[repr(C)]
-pub struct SpriteSheetC {
-    sprite_sheet: *mut SpriteSheet,
-}
-
-#[no_mangle]
-pub(crate) extern "C" fn SpriteSheetC_free(sheet: *mut SpriteSheetC) {
-    unsafe {
-        if let Some(sheet_c) = sheet.as_mut() {
-            if let Some(inner_sheet) = sheet_c.sprite_sheet.as_mut() {
-                drop(Box::from_raw(inner_sheet));
-            }
-            drop(Box::from_raw(sheet_c));
-        }
-    }
-}
-
-#[no_mangle]
-pub(crate) extern "C" fn SpriteSheetC_getUV(sheet: *const SpriteSheetC, index: usize) -> UVCoordsC {
-    unsafe {
-        if let Some(sheet) = sheet.as_ref().and_then(|s| s.sprite_sheet.as_ref()) {
-            let (min_u, min_v, max_u, max_v) = sheet.get_uv(index);
-            UVCoordsC {
-                min_u,
-                min_v,
-                max_u,
-                max_v,
-            }
-        } else { UVCoordsC::default() }
-    }
-}
-
-#[no_mangle]
-pub(crate) extern "C" fn SpriteSheetC_getTexture(sheet: *const SpriteSheetC) -> u32 {
-    unsafe {
-        if let Some(sheet) = sheet.as_ref().and_then(|s| s.sprite_sheet.as_ref()) {
-            sheet.get_texture()
-        } else { u32::MAX }
-    }
-}
-
-#[no_mangle]
-pub(crate) extern "C" fn SpriteSheetC_fromImage(path: *const c_char, sprite_width: u32, sprite_height: u32) -> *mut SpriteSheetC {
-    unsafe {
-        if let Ok(path) = CStr::from_ptr(path).to_str() {
-            Box::into_raw(Box::new(
-                SpriteSheetC {
-                    sprite_sheet: Box::into_raw(Box::new(
-                        SpriteSheet::from_image(path, sprite_width, sprite_height).unwrap_or_default()
-                    ))
-                }
-            ))
-        } else { null_mut() } 
-    }
-}
-
-#[no_mangle]
-pub(crate) extern "C" fn SpriteSheetC_fromColor(r: u8, g: u8, b: u8, a: u8) -> *mut SpriteSheetC {
-    Box::into_raw(Box::new(
-        SpriteSheetC {
-            sprite_sheet: Box::into_raw(Box::new(
-                SpriteSheet::from_color(Color::new(r, g, b, a)).unwrap_or_default()
-            )),
-        }
-    ))
-}
-
-#[repr(C)]
 pub enum AttributeDataTypeC {
     Float,
     FloatVec2,
@@ -531,8 +437,7 @@ pub(crate) extern "C" fn EngineBuilderC_init(engine_builder: *mut EngineBuilderC
                     engine: Box::into_raw(engine),
                 }
             ));
-        }
-        null_mut()
+        } else { null_mut() }
     }
 }
 
@@ -621,15 +526,13 @@ pub(crate) extern "C" fn EngineBuilderC_setWindowName(engine_builder: *mut Engin
 
 #[no_mangle]
 pub(crate) extern "C" fn EngineBuilderC_free(engine_builder: *mut EngineBuilderC) {
-    if engine_builder.is_null() {
-        return
-    }
-
     unsafe {
-        if let Some(engine_builder) = engine_builder.as_mut().and_then(|e| e.engine_builder.as_mut()) {
-            drop(Box::from_raw(engine_builder));
+        if let Some(engine_builder_c) = engine_builder.as_mut() {
+            if let Some(inner) = engine_builder_c.engine_builder.as_mut() {
+                drop(Box::from_raw(inner));
+            }
+            drop(Box::from_raw(engine_builder_c));
         }
-        drop(Box::from_raw(engine_builder));
     }
 }
 
