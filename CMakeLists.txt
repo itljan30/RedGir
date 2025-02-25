@@ -13,10 +13,10 @@ endif()
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" RUST_BUILD_TYPE)
 if(RUST_BUILD_TYPE STREQUAL "release")
-    set(REDGIR_LIB ${CMAKE_CURRENT_SOURCE_DIR}/target/release/libRedGir${CMAKE_SHARED_LIBRARY_SUFFIX})
+    set(REDGIR_LIB ${CMAKE_CURRENT_SOURCE_DIR}/target/release/libredgir${CMAKE_SHARED_LIBRARY_SUFFIX})
     set(CARGO_COMMAND ${CARGO_EXE} build --features cpp-bindings --release)
 else()
-    set(REDGIR_LIB ${CMAKE_CURRENT_SOURCE_DIR}/target/debug/libRedGir${CMAKE_SHARED_LIBRARY_SUFFIX})
+    set(REDGIR_LIB ${CMAKE_CURRENT_SOURCE_DIR}/target/debug/libredgir${CMAKE_SHARED_LIBRARY_SUFFIX})
     set(CARGO_COMMAND ${CARGO_EXE} build --features cpp-bindings)
 endif()
 
