@@ -65,7 +65,7 @@ public:
 
     Action getKeyState(Key key) const;
     bool isRunning() const;
-    Sprite getSprite(SpriteSheetId sheet, size_t index) const;
+    Sprite getSprite(SpriteId spriteId) const;
     uint32_t getTextureFromSpriteSheet(SpriteSheetId sheet) const;
     ShaderId defaultShader() const;
     uint64_t timeSinceInitializationMilis() const;

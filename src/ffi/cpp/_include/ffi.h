@@ -118,7 +118,7 @@ extern "C" {
     WindowDimensionsC EngineC_getWindowDimensions(const EngineC *engine);
     uint32_t EngineC_addSpriteSheet(EngineC *engine, const char *path, uint32_t spriteWidth, uint32_t spriteHeight);
     // TODO EngineC_addShaderProgram
-    SpriteC *EngineC_getSprite(const EngineC *engine, uint32_t sheet, size_t index);
+    SpriteC *EngineC_getSprite(const EngineC *engine, uint32_t spriteId);
     // TODO EngineC_getAllSprites
     uint32_t EngineC_addSprite(
         EngineC *engine, uint32_t spriteSheet, size_t spriteindex,
