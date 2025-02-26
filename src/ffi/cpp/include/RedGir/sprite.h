@@ -12,10 +12,18 @@ struct SpriteC;
 
 struct SpriteSheetId {
     uint32_t id;
+
+    bool operator==(const SpriteSheetId &other) const {
+        return id == other.id;
+    }
 };
 
 struct SpriteId {
     uint32_t id;
+
+    bool operator==(const SpriteId &other) const {
+        return id == other.id;
+    }
 };
 
 enum class Flip {
