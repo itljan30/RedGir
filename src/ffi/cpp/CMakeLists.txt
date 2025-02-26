@@ -13,6 +13,7 @@ target_include_directories(
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/_include
 )
 
+# FIXME Move the rust library to lib directory as well
 set_target_properties(
     RedGir_cpp PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
