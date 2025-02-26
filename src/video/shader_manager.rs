@@ -6,7 +6,7 @@ use std::ffi::{CString, NulError};
 use std::ptr;
 use std::string::FromUtf8Error;
 
-// FIXME make it so the shader doesn't have to take in the aspect ratio
+// FIXME rotation does not qutie work
 pub const DEFAULT_VERTEX_SHADER: &str = r#"
 #version 330 core
 
@@ -35,7 +35,6 @@ void main() {
         new_position.y *= -1.0;
     }
 
-    new_position.y *= u_aspect_ratio;
     new_position += u_sprite_center;
 
     gl_Position = vec4(new_position, 0.0f, 1.0f);
@@ -387,24 +386,23 @@ impl Attribute {
                 let bottom_right = (pos.0 + s_width as i32, pos.1);
                 let top_left = (pos.0, pos.1 + s_height as i32);
                 let top_right = (pos.0 + s_width as i32, pos.1 + s_height as i32);
-                let aspect_ratio = w_width as f32 / w_height as f32;
 
                 [
                     [
                         2.0 * bottom_left.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * (bottom_left.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
+                        2.0 * bottom_left.1 as f32 / w_height as f32 - 1.0
                     ],
                     [
                         2.0 * bottom_right.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * (bottom_right.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
+                        2.0 * bottom_right.1 as f32 / w_height as f32 - 1.0
                     ],
                     [
                         2.0 * top_left.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * (top_left.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
+                        2.0 * top_left.1 as f32 / w_height as f32 - 1.0
                     ],
                     [
                         2.0 * top_right.0 as f32 / w_width as f32 - 1.0,
-                        2.0 * (top_right.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
+                        2.0 * top_right.1 as f32 / w_height as f32 - 1.0
                     ],
                 ]
             }),
