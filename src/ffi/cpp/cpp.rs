@@ -2,9 +2,9 @@
 #![allow(non_snake_case)]
 
 use crate::engine::{EngineBuilder, Engine, GetId};
-use crate::video::sprite::{Flip, Sprite, SpriteSheet};
+use crate::video::sprite::{Flip, Sprite};
 use crate::video::shader_manager::{
-    Attribute, AttributeData, Uniform, UniformData, VertexShader, FragmentShader, ShaderProgram
+    Attribute, AttributeData, Uniform, UniformData, VertexShader, FragmentShader
 };
 use crate::video::color::Color;
 use crate::utility::timer::Timer;
@@ -12,7 +12,6 @@ use crate::input::input_manager::{Key, Action};
 
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use std::collections::HashMap;
 use std::ptr::null_mut;
 
 macro_rules! impl_from_trait_for_identical_enums {
@@ -355,8 +354,39 @@ pub union AttributeDataValueC {
 
 #[repr(C)]
 pub struct AttributeDataC {
-    kind: AttributeDataTypeC,
-    func: extern "C" fn(*const EngineC, *const SpriteC) -> AttributeDataValueC,
+    pub kind: AttributeDataTypeC,
+    pub func: extern "C" fn(*const EngineC, *const SpriteC) -> AttributeDataValueC,
+}
+
+#[repr(C)]
+pub struct AttributeC {
+    name: *const c_char,
+    location: u32,
+    data: AttributeDataC,
+}
+
+impl Into<Attribute> for AttributeC {
+    fn into(self) -> Attribute {
+        let name = unsafe { CStr::from_ptr(self.name).to_str().unwrap().to_string() };
+
+        let callback_wrapper = { |engine: &Engine, sprite: &Sprite| {
+            let c_engine = EngineC { engine: engine as *const Engine as *mut Engine };
+            let c_sprite = SpriteC { sprite: sprite as *const Sprite as *mut Sprite };
+            (self.data.func)(&c_engine, &c_sprite)
+        }};
+
+        let data = match self.data.kind {
+            AttributeDataTypeC::Float     => AttributeData::Float(callback_wrapper),
+            AttributeDataTypeC::FloatVec2 => AttributeData::FloatVec2(callback_wrapper),
+            AttributeDataTypeC::FloatVec3 => AttributeData::FloatVec3(callback_wrapper),
+            AttributeDataTypeC::FloatVec4 => AttributeData::FloatVec4(callback_wrapper),
+            AttributeDataTypeC::Int       => AttributeData::Int(callback_wrapper),
+            AttributeDataTypeC::Bool      => AttributeData::Bool(callback_wrapper),
+            AttributeDataTypeC::UInt      => AttributeData::UInt(callback_wrapper),
+        };
+
+        Attribute::new(name, self.location, data)
+    }
 }
 
 #[repr(C)]
@@ -405,6 +435,12 @@ pub union UniformDataValueC {
 pub struct UniformDataC {
     kind: UniformDataTypeC,
     func: extern "C" fn(*const EngineC, *const SpriteC) -> UniformDataValueC,
+}
+
+#[repr(C)]
+pub struct UniformC {
+    name: *const c_char,
+    data: UniformDataC,
 }
 
 #[repr(C)]
@@ -626,14 +662,48 @@ pub(crate) extern "C" fn EngineC_addSpriteSheet(
     }
 }
 
+// TODO Add more error checking
 #[no_mangle]
 pub(crate) extern "C" fn EngineC_addShaderProgram(
-    // vertex_shader: u32,
-    // fragment_shader: u32,
-    // attributes: Vec<AttributeC>,
-    // global_uniforms: Vec<UniformC>,
-    // instance_uniforms: Vec<UniformC>,
-) {} // TODO
+    engine: *mut EngineC,
+    vertex_shader: *const VertexShaderC,
+    fragment_shader: *const FragmentShaderC,
+    attributes: *const AttributeC,
+    attributes_len: usize,
+    global_uniforms: *const UniformC,
+    global_uniforms_len: usize,
+    instance_uniforms: *const UniformC,
+    instance_uniforms_len: usize,
+) -> u32 {
+    unsafe {
+        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
+            let mut attributes_vec: Vec<Attribute> = Vec::with_capacity(attributes_len);
+            for i in 0..attributes_len {
+                attributes_vec.push((*attributes.add(i)).into());
+            }
+
+            let mut global_uniforms_vec: Vec<Uniform> = Vec::with_capacity(global_uniforms_len);
+            for i in 0..global_uniforms_len {
+                global_uniforms_vec.push((*global_uniforms.add(i)).into());
+            }
+
+            let mut instance_uniforms_vec: Vec<Uniform> = Vec::with_capacity(instance_uniforms_len);
+            for i in 0..instance_uniforms_len {
+                instance_uniforms_vec.push((*instance_uniforms.add(i)).into());
+            }
+
+            if let Ok(id) = engine.add_shader_program(
+                vertex_shader.as_ref().and_then(|s| s.shader.as_ref()).unwrap(),
+                fragment_shader.as_ref().and_then(|s| s.shader.as_ref()).unwrap(),
+                attributes_vec,
+                global_uniforms_vec,
+                instance_uniforms_vec,
+            ) {
+                id.id()
+            } else { u32::MAX }
+        } else { u32::MAX }
+    }
+}
 
 #[no_mangle]
 pub(crate) extern "C" fn EngineC_getSprite(engine: *mut EngineC, sprite_id: u32) -> *mut SpriteC {
@@ -835,6 +905,7 @@ pub(crate) extern "C" fn EngineC_free(engine: *mut EngineC) {
     }
 }
 
+
 #[repr(C)]
 pub struct TimerC {
     timer: *mut Timer,
@@ -884,6 +955,66 @@ pub(crate) extern "C" fn TimerC_free(timer: *mut TimerC) {
                 drop(Box::from_raw(inner));
             }
             drop(Box::from_raw(timer_c));
+        }
+    }
+}
+
+#[repr(C)]
+pub struct VertexShaderC {
+    shader: *mut VertexShader,
+}
+
+#[no_mangle]
+pub(crate) extern "C" fn VertexShaderC_new(source: *const c_char) -> *mut VertexShaderC {
+    unsafe {
+        if let Ok(src) = CStr::from_ptr(source).to_str() {
+            if let Ok(shader) = VertexShader::new(src) {
+                Box::into_raw(Box::from(VertexShaderC {
+                    shader: Box::into_raw(Box::new(shader)),
+                }))
+            } else { null_mut() }
+        } else { null_mut() }
+    }
+}
+
+#[no_mangle]
+pub(crate) extern "C" fn VertexShaderC_free(shader: *mut VertexShaderC) {
+    unsafe {
+        if let Some(c_shader) = shader.as_mut() {
+            if let Some(inner) = c_shader.shader.as_mut() {
+                drop(Box::from_raw(inner));
+            }
+            drop(Box::from_raw(c_shader));
+        }
+    }
+}
+
+#[repr(C)]
+pub struct FragmentShaderC {
+    shader: *mut FragmentShader,
+}
+
+#[no_mangle]
+pub(crate) extern "C" fn FragmentShaderC_new(source: *const c_char) -> *mut FragmentShaderC {
+    unsafe {
+        if let Ok(src) = CStr::from_ptr(source).to_str() {
+            if let Ok(shader) = FragmentShader::new(src) {
+                Box::into_raw(Box::from(FragmentShaderC {
+                    shader: Box::into_raw(Box::new(shader)),
+                }))
+            } else { null_mut() }
+        } else { null_mut() }
+    }
+}
+
+#[no_mangle]
+pub(crate) extern "C" fn FragmentShaderC_free(shader: *mut FragmentShaderC) {
+    unsafe {
+        if let Some(c_shader) = shader.as_mut() {
+            if let Some(inner) = c_shader.shader.as_mut() {
+                drop(Box::from_raw(inner));
+            }
+            drop(Box::from_raw(c_shader));
         }
     }
 }
