@@ -16,6 +16,10 @@ Sprite::~Sprite() {
     SpriteC_free(m_sprite);
 }
 
+bool Sprite::isValid() const {
+    return m_sprite != nullptr;
+}
+
 float Sprite::getRotation() const {
     return SpriteC_getRotation(m_sprite);
 }

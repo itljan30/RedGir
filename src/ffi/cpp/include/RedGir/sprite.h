@@ -47,6 +47,7 @@ public:
     );
     ~Sprite();
 
+    bool isValid() const;
     float getRotation() const;
     Flip getFlip() const;
     size_t getSpriteSheetIndex() const;
