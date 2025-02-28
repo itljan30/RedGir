@@ -632,11 +632,24 @@ pub(crate) extern "C" fn EngineC_addSpriteSheet(
         if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
             if let Ok(path) = CStr::from_ptr(path).to_str() {
                 match engine.add_sprite_sheet(path, sprite_width, sprite_height) {
-                    Ok(val) => val.id(),
-                    Err(_) => u32::MAX,
+                    Ok(val) => {
+                        eprintln!("Succesfully added sprite sheet");
+                        val.id()
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to add sprite sheet: {}", e);
+                        u32::MAX
+                    }
                 }
-            } else { u32::MAX }
-        } else { u32::MAX }
+            } 
+            else {
+                eprintln!("{:?} is invalid", path);
+                u32::MAX
+            }
+        } else {
+            eprintln!("Engine was invalid");
+            u32::MAX
+        }
     }
 }
 
