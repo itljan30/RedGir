@@ -4,7 +4,7 @@
 use crate::engine::{EngineBuilder, Engine, GetId};
 use crate::video::sprite::{Flip, Sprite};
 use crate::video::shader_manager::{
-    Attribute, AttributeData, Uniform, UniformData, VertexShader, FragmentShader
+    /* Attribute, AttributeData, Uniform, UniformData, */ VertexShader, FragmentShader
 };
 use crate::video::color::Color;
 use crate::utility::timer::Timer;
@@ -330,6 +330,7 @@ impl Default for UVCoordsC {
     }
 }
  
+#[allow(dead_code)]
 #[repr(C)]
 pub enum AttributeDataTypeC {
     Float,
@@ -365,30 +366,7 @@ pub struct AttributeC {
     data: AttributeDataC,
 }
 
-impl Into<Attribute> for AttributeC {
-    fn into(self) -> Attribute {
-        let name = unsafe { CStr::from_ptr(self.name).to_str().unwrap().to_string() };
-
-        let callback_wrapper = { |engine: &Engine, sprite: &Sprite| {
-            let c_engine = EngineC { engine: engine as *const Engine as *mut Engine };
-            let c_sprite = SpriteC { sprite: sprite as *const Sprite as *mut Sprite };
-            (self.data.func)(&c_engine, &c_sprite)
-        }};
-
-        let data = match self.data.kind {
-            AttributeDataTypeC::Float     => AttributeData::Float(callback_wrapper),
-            AttributeDataTypeC::FloatVec2 => AttributeData::FloatVec2(callback_wrapper),
-            AttributeDataTypeC::FloatVec3 => AttributeData::FloatVec3(callback_wrapper),
-            AttributeDataTypeC::FloatVec4 => AttributeData::FloatVec4(callback_wrapper),
-            AttributeDataTypeC::Int       => AttributeData::Int(callback_wrapper),
-            AttributeDataTypeC::Bool      => AttributeData::Bool(callback_wrapper),
-            AttributeDataTypeC::UInt      => AttributeData::UInt(callback_wrapper),
-        };
-
-        Attribute::new(name, self.location, data)
-    }
-}
-
+#[allow(dead_code)]
 #[repr(C)]
 pub enum UniformDataTypeC {
     Float,
@@ -662,47 +640,29 @@ pub(crate) extern "C" fn EngineC_addSpriteSheet(
     }
 }
 
-// TODO Add more error checking
+/// TODO This will probably have to wait until I add the ability to give the engine user defined
+/// context to pass for attributes and shaders. Currently, the callbacks have the signature of
+/// `fn(&Engine, &Sprite)` so I can't pass that directly to the C functions because they would need
+/// `fn(*const EngineC, *const SpriteC)` instead. I can create a wrapper function that would do the
+/// conversion, but it would have to be created dynamically at runtime in order to keep the required
+/// function signature and inherently know which C function to call. That requires it to be the type
+/// `Box<dyn Fn(&Engine, &Sprite)>` which isn't compatible or convertable to `fn(&Engine, &Sprite)`.
+/// If I could have the engine pass certain context when calling the callbacks, I could maybe have the
+/// engine send some sort of key based on which callback is currently being called and then have some
+/// sort of map here that would map a key to the C functions and the context they require.
 #[no_mangle]
 pub(crate) extern "C" fn EngineC_addShaderProgram(
-    engine: *mut EngineC,
-    vertex_shader: *const VertexShaderC,
-    fragment_shader: *const FragmentShaderC,
-    attributes: *const AttributeC,
-    attributes_len: usize,
-    global_uniforms: *const UniformC,
-    global_uniforms_len: usize,
-    instance_uniforms: *const UniformC,
-    instance_uniforms_len: usize,
+    _engine: *mut EngineC,
+    _vertex_shader: *const VertexShaderC,
+    _fragment_shader: *const FragmentShaderC,
+    _attributes: *const AttributeC,
+    _attributes_len: usize,
+    _global_uniforms: *const UniformC,
+    _global_uniforms_len: usize,
+    _instance_uniforms: *const UniformC,
+    _instance_uniforms_len: usize,
 ) -> u32 {
-    unsafe {
-        if let Some(engine) = engine.as_mut().and_then(|e| e.engine.as_mut()) {
-            let mut attributes_vec: Vec<Attribute> = Vec::with_capacity(attributes_len);
-            for i in 0..attributes_len {
-                attributes_vec.push((*attributes.add(i)).into());
-            }
-
-            let mut global_uniforms_vec: Vec<Uniform> = Vec::with_capacity(global_uniforms_len);
-            for i in 0..global_uniforms_len {
-                global_uniforms_vec.push((*global_uniforms.add(i)).into());
-            }
-
-            let mut instance_uniforms_vec: Vec<Uniform> = Vec::with_capacity(instance_uniforms_len);
-            for i in 0..instance_uniforms_len {
-                instance_uniforms_vec.push((*instance_uniforms.add(i)).into());
-            }
-
-            if let Ok(id) = engine.add_shader_program(
-                vertex_shader.as_ref().and_then(|s| s.shader.as_ref()).unwrap(),
-                fragment_shader.as_ref().and_then(|s| s.shader.as_ref()).unwrap(),
-                attributes_vec,
-                global_uniforms_vec,
-                instance_uniforms_vec,
-            ) {
-                id.id()
-            } else { u32::MAX }
-        } else { u32::MAX }
-    }
+    todo!()
 }
 
 #[no_mangle]

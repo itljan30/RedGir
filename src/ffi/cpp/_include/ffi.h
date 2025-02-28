@@ -129,80 +129,80 @@ extern "C" {
     uint32_t EngineC_getTextureFromSpriteSheet(const EngineC *engine, uint32_t spriteSheet);
     void EngineC_free(EngineC *engine);
 
-    typedef enum AttributeDataTypeC {
-        AttributeFloat,
-        AttributeFloatVec2,
-        AttributeFloatVec3,
-        AttributeFloatVec4,
-        AttributeInt,
-        AttributeBool,
-        AttributeUInt,
-    } AttributeDataTypeC;
-
-    typedef union AttributeDataValueC {
-        float Float[4];
-        float FloatVec2[4][2];
-        float FloatVec3[4][3];
-        float FloatVec4[4][4];
-        uint32_t Int[4];
-        bool Bool[4];
-        uint32_t UInt[4];
-    } AttributeDataValueC;
-
-    typedef struct AttributeDataC {
-        AttributeDataTypeC kind;
-        AttributeDataValueC (*func)(const EngineC *engine, const SpriteC *sprite);
-    } AttributeDataC;
-
-    typedef enum UniformDataTypeC {
-        UniformFloat,
-        UniformFloatVec2,
-        UniformFloatVec3,
-        UniformFloatVec4,
-        UniformFloatMat2,
-        UniformFloatMat3,
-        UniformFloatMat4,
-        UniformFloatMat2x3,
-        UniformFloatMat2x4,
-        UniformFloatMat3x2,
-        UniformFloatMat3x4,
-        UniformFloatMat4x2,
-        UniformFloatMat4x3,
-        UniformInt,
-        UniformBool,
-        UniformUInt,
-        UniformSampler2D
-    } UniformDataTypeC;
-
-    typedef union UniformDataValueC {
-        float   Float;
-        float   FloatVec2[2];
-        float   FloatVec3[3];
-        float   FloatVec4[4];
-        float   FloatMat2[2][2];
-        float   FloatMat3[3][3];
-        float   FloatMat4[4][4];
-        float   FloatMat2x3[2][3];
-        float   FloatMat2x4[2][4];
-        float   FloatMat3x2[3][2];
-        float   FloatMat3x4[3][4];
-        float   FloatMat4x2[4][2];
-        float   FloatMat4x3[4][3];
-        int32_t Int;
-        bool    Bool;
-        uint32_t UInt;
-        uint32_t Sampler2D;
-    } UniformDataValueC;
-
-    typedef struct UniformDataC {
-        UniformDataTypeC kind;
-        UniformDataValueC (*func)(const EngineC *engine, const SpriteC *sprite);
-    } UniformDataC;
-
-    struct VertexShaderC;
-    struct FragmentShaderC;
-    VertexShaderC *VertexShaderC_new(const char *source);
-    void VertexShaderC_free(VertexShaderC *shader);
-    FragmentShaderC *FragmentShaderC_new(const char *source);
-    void FragmentShaderC_free(FragmentShaderC *shader);
+    // typedef enum AttributeDataTypeC {
+    //     AttributeFloat,
+    //     AttributeFloatVec2,
+    //     AttributeFloatVec3,
+    //     AttributeFloatVec4,
+    //     AttributeInt,
+    //     AttributeBool,
+    //     AttributeUInt,
+    // } AttributeDataTypeC;
+    //
+    // typedef union AttributeDataValueC {
+    //     float Float[4];
+    //     float FloatVec2[4][2];
+    //     float FloatVec3[4][3];
+    //     float FloatVec4[4][4];
+    //     uint32_t Int[4];
+    //     bool Bool[4];
+    //     uint32_t UInt[4];
+    // } AttributeDataValueC;
+    //
+    // typedef struct AttributeDataC {
+    //     AttributeDataTypeC kind;
+    //     AttributeDataValueC (*func)(const EngineC *engine, const SpriteC *sprite);
+    // } AttributeDataC;
+    //
+    // typedef enum UniformDataTypeC {
+    //     UniformFloat,
+    //     UniformFloatVec2,
+    //     UniformFloatVec3,
+    //     UniformFloatVec4,
+    //     UniformFloatMat2,
+    //     UniformFloatMat3,
+    //     UniformFloatMat4,
+    //     UniformFloatMat2x3,
+    //     UniformFloatMat2x4,
+    //     UniformFloatMat3x2,
+    //     UniformFloatMat3x4,
+    //     UniformFloatMat4x2,
+    //     UniformFloatMat4x3,
+    //     UniformInt,
+    //     UniformBool,
+    //     UniformUInt,
+    //     UniformSampler2D
+    // } UniformDataTypeC;
+    //
+    // typedef union UniformDataValueC {
+    //     float   Float;
+    //     float   FloatVec2[2];
+    //     float   FloatVec3[3];
+    //     float   FloatVec4[4];
+    //     float   FloatMat2[2][2];
+    //     float   FloatMat3[3][3];
+    //     float   FloatMat4[4][4];
+    //     float   FloatMat2x3[2][3];
+    //     float   FloatMat2x4[2][4];
+    //     float   FloatMat3x2[3][2];
+    //     float   FloatMat3x4[3][4];
+    //     float   FloatMat4x2[4][2];
+    //     float   FloatMat4x3[4][3];
+    //     int32_t Int;
+    //     bool    Bool;
+    //     uint32_t UInt;
+    //     uint32_t Sampler2D;
+    // } UniformDataValueC;
+    //
+    // typedef struct UniformDataC {
+    //     UniformDataTypeC kind;
+    //     UniformDataValueC (*func)(const EngineC *engine, const SpriteC *sprite);
+    // } UniformDataC;
+    //
+    // struct VertexShaderC;
+    // struct FragmentShaderC;
+    // VertexShaderC *VertexShaderC_new(const char *source);
+    // void VertexShaderC_free(VertexShaderC *shader);
+    // FragmentShaderC *FragmentShaderC_new(const char *source);
+    // void FragmentShaderC_free(FragmentShaderC *shader);
 }
