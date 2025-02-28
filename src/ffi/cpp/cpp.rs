@@ -633,7 +633,6 @@ pub(crate) extern "C" fn EngineC_addSpriteSheet(
             if let Ok(path) = CStr::from_ptr(path).to_str() {
                 match engine.add_sprite_sheet(path, sprite_width, sprite_height) {
                     Ok(val) => {
-                        eprintln!("Succesfully added sprite sheet");
                         val.id()
                     }
                     Err(e) => {
