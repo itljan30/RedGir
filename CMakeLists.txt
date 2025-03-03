@@ -20,6 +20,10 @@ else()
     set(CARGO_COMMAND ${CARGO_EXE} build --features cpp-bindings)
 endif()
 
+if(MSVC)
+    set(CARGO_COMMAND rustc src/lib.rs --crate-type cdylib -C link-args="/DEF:redgir.def")
+endif()
+
 add_custom_command(
     OUTPUT ${REDGIR_LIB}
     COMMAND ${CARGO_COMMAND}
