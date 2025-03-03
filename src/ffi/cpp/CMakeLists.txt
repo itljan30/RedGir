@@ -21,4 +21,9 @@ set_target_properties(
 )
 
 add_dependencies(RedGir_cpp RedGir_rs)
-target_link_libraries(RedGir_cpp PRIVATE ${REDGIR_LIB})
+
+if(MSVC)
+    target_link_libraries(RedGir_cpp PRIVATE ${REDGIR_LIB}.lib)
+else()
+    target_link_libraries(RedGir_cpp PRIVATE ${REDGIR_LIB})
+endif()
