@@ -113,7 +113,7 @@ impl WindowManager {
     }
 
     pub fn is_running(&self) -> bool {
-        return !self.window.should_close();
+        !self.window.should_close()
     }
 
     pub fn add_sprite_sheet(

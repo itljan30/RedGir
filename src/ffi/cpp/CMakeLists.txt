@@ -14,8 +14,4 @@ target_include_directories(
 
 add_dependencies(RedGir_cpp RedGir_rs)
 
-if(MSVC)
-    target_link_libraries(RedGir_cpp PRIVATE ${REDGIR_LIB}.lib)
-else()
-    target_link_libraries(RedGir_cpp PRIVATE ${REDGIR_LIB})
-endif()
+target_link_libraries(RedGir_cpp PRIVATE ${REDGIR_LIB})
