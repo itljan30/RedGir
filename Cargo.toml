@@ -1,5 +1,5 @@
 [package]
-name = "RedGir"
+name = "redgir"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,4 +9,4 @@ glfw = "0.59.0"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [lib]
-name = "RedGir"
+name = "redgir"

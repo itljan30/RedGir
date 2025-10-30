@@ -60,13 +60,11 @@ impl WindowManager {
                     Attribute::texture_uv_from_sprite_sheet("tex_coords".to_string(), 1),
                 ],
                 vec![
-                    Uniform::aspect_ratio("u_aspect_ratio".to_string()),
-                ],
-                vec![
                     Uniform::flip("u_flip".to_string()),
                     Uniform::rotation("u_rotation".to_string()),
                     Uniform::sprite_center("u_sprite_center".to_string()),
                     Uniform::texture_from_sprite_sheet("tex_sample".to_string()),
+                    Uniform::aspect_ratio("u_aspect_ratio".to_string()),
                 ],
             );
 
@@ -153,15 +151,13 @@ impl WindowManager {
         vertex_shader: &VertexShader,
         fragment_shader: &FragmentShader,
         attributes: Vec<Attribute>,
-        shared_uniforms: Vec<Uniform>,
-        per_sprite_uniforms: Vec<Uniform>,
+        uniforms: Vec<Uniform>,
     ) -> Result<ShaderId, ShaderError> {
         let program = ShaderProgram::new(
             vertex_shader,
             fragment_shader,
             attributes,
-            shared_uniforms,
-            per_sprite_uniforms
+            uniforms,
         )?;
         let shader_id = program.id();
         self.shaders.insert(shader_id, program);
@@ -278,18 +274,13 @@ impl WindowManager {
             for (shader, group) in groups.iter() {
                 let program = self.shaders.get(&shader).unwrap();
                 program.apply();
-                program.apply_global_uniforms(&*engine, group[0]);
+                program.apply_uniforms(&*engine, group[0]);
 
-                // TODO: refactor so that I'm not filling one vbo per sprite, something about
-                // UBOs or SSBOs? (ChatGPT suggestion idk, some knowledge I don't have right now)
-                for &sprite in group {
-                    program.apply_instance_uniforms(&*engine, sprite);
-                    program.fill_vbo(&*engine, sprite);
-
-                    gl::DrawArrays(gl::TRIANGLES, 0, 6);
-                }
+                program.fill_vbo(&*engine, &group);
+                gl::DrawArrays(gl::TRIANGLES, 0, 6);
             }
         }
         self.swap_buffers();
     }
 }
+

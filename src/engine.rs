@@ -202,15 +202,13 @@ impl Engine {
         vertex_shader: &VertexShader,
         fragment_shader: &FragmentShader,
         attributes: Vec<Attribute>,
-        shared_uniforms: Vec<Uniform>,
-        per_sprite_uniform: Vec<Uniform>,
+        uniforms: Vec<Uniform>,
     ) -> Result<ShaderId, ShaderError> {
         self.window.add_shader_program(
             vertex_shader,
             fragment_shader,
             attributes,
-            shared_uniforms,
-            per_sprite_uniform
+            uniforms,
         )
     }
 

@@ -351,6 +351,10 @@ impl Attribute {
         }
     }
 
+    pub fn get_data(&self) -> &AttributeData {
+        &self.data
+    }
+
     /// A preset Attribute that returns a [[f32; 2]; 4], or (x, y) position for each vertex in NDC.
     pub fn position(name: String, location: u32) -> Self {
         Self::new(
@@ -508,8 +512,7 @@ impl VertexBuffer {
 pub struct ShaderProgram {
     id: GLuint,
     attributes: Vec<Attribute>,
-    global_uniforms: Vec<Uniform>,
-    instance_uniforms: Vec<Uniform>,
+    uniforms: Vec<Uniform>,
     vao: VertexArray,
     vbo: VertexBuffer,
 }
@@ -534,8 +537,7 @@ impl ShaderProgram {
         vertex_shader: &VertexShader,
         fragment_shader: &FragmentShader,
         attributes: Vec<Attribute>,
-        global_uniforms: Vec<Uniform>,
-        instance_uniforms: Vec<Uniform>,
+        uniforms: Vec<Uniform>,
     ) -> Result<Self, ShaderError> {
         unsafe {
             let id = gl::CreateProgram();
@@ -576,60 +578,51 @@ impl ShaderProgram {
             Ok(Self {
                 id,
                 attributes,
-                global_uniforms,
-                instance_uniforms,
+                uniforms,
                 vao,
                 vbo,
             })
         }
     }
 
-    pub unsafe fn apply_global_uniforms(&self, engine: &Engine, sprite: &Sprite) {
-        for uniform in self.global_uniforms() {
+    pub unsafe fn apply_uniforms(&self, engine: &Engine, sprite: &Sprite) {
+        for uniform in self.uniforms() {
             uniform.bind(self.id, engine, sprite)
         }
     }
 
-    pub unsafe fn apply_instance_uniforms(&self, engine: &Engine, sprite: &Sprite) {
-        for uniform in self.instance_uniforms() {
-            uniform.bind(self.id, engine, sprite);
-        }
-    }
-
-    pub unsafe fn fill_vbo(&self, engine: &Engine, sprite: &Sprite) {
+    pub unsafe fn fill_vbo(&self, engine: &Engine, sprites: &Vec<&Sprite>) {
         let mut buffer_data = Vec::new();
 
-        for attribute in self.attributes() {
-            match attribute.data{ // Call the function to get the data
-                AttributeData::Float(func)     => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::FloatVec2(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::FloatVec3(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::FloatVec4(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::Int(func)       => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::Bool(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                AttributeData::UInt(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+        for sprite in sprites {
+            for attribute in self.attributes() {
+                match attribute.get_data(){ // Call the function to get the data
+                    AttributeData::Float(func)     => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                    AttributeData::FloatVec2(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                    AttributeData::FloatVec3(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                    AttributeData::FloatVec4(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                    AttributeData::Int(func)       => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                    AttributeData::Bool(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                    AttributeData::UInt(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
+                }
             }
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo.id);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                buffer_data.len() as isize,
-                buffer_data.as_ptr() as *const _,
-                gl::DYNAMIC_DRAW,
-            );
         }
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo.id);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            buffer_data.len() as isize,
+            buffer_data.as_ptr() as *const _,
+            gl::DYNAMIC_DRAW,
+        );
     }
 
     pub fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
     }
 
-    pub fn global_uniforms(&self) -> &Vec<Uniform> {
-        &self.global_uniforms
-    }
-
-    pub fn instance_uniforms(&self) -> &Vec<Uniform> {
-        &self.instance_uniforms
+    pub fn uniforms(&self) -> &Vec<Uniform> {
+        &self.uniforms
     }
 
     pub unsafe fn apply(&self) {
