@@ -280,6 +280,8 @@ impl WindowManager {
                 program.apply();
                 program.apply_global_uniforms(&*engine, group[0]);
 
+                // TODO: refactor so that I'm not filling one vbo per sprite, something about
+                // UBOs or SSBOs? (ChatGPT suggestion idk, some knowledge I don't have right now)
                 for &sprite in group {
                     program.apply_instance_uniforms(&*engine, sprite);
                     program.fill_vbo(&*engine, sprite);
