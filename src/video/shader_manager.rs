@@ -476,9 +476,7 @@ impl Attribute {
                         2.0 * (top_right.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
                     ],
                 ];
-                for d in data {
-                    Attribute::write_data_to_buffer(buffer, &d);
-                }
+                Attribute::write_data_to_buffer(buffer, &data);
             },
             AttributeDataType::FloatVec2,
         )
@@ -499,9 +497,7 @@ impl Attribute {
                     [u_min, v_max],
                     [u_max, v_max],
                 ];
-                for d in data {
-                    Attribute::write_data_to_buffer(buffer, &d);
-                }
+                Attribute::write_data_to_buffer(buffer, &data);
             },
             AttributeDataType::FloatVec2,
         )
@@ -740,7 +736,7 @@ impl ShaderProgram {
                 0,
                 (indices.len() * std::mem::size_of::<u32>()) as isize,
                 indices.as_ptr() as *const _,
-            )
+            );
         }
     }
 
@@ -815,4 +811,3 @@ fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLui
 
     Ok(shader_id)
 }
-

@@ -92,7 +92,7 @@ impl WindowManager {
             default_fragment: fragment,
             default_shader: shader_id,
             timer: Timer::new(),
-            target_frame_time: 1.0 / 60.0,
+            target_frame_time: 0.0,
             show_fps: false,
             last_sprite_id: 0,
         }
@@ -243,8 +243,10 @@ impl WindowManager {
     }
 
     pub fn swap_buffers(&mut self) {
-        while self.timer.get_elapsed_seconds() < self.target_frame_time {
-            yield_now();
+        if self.target_frame_time != 0.0 {
+            while self.timer.get_elapsed_seconds() < self.target_frame_time {
+                yield_now();
+            }
         }
 
         if self.show_fps {
@@ -286,4 +288,3 @@ impl WindowManager {
         self.swap_buffers();
     }
 }
-
