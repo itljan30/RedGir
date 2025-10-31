@@ -276,7 +276,7 @@ impl WindowManager {
                 program.apply();
                 program.apply_uniforms(&*engine, group[0]);
 
-                program.fill_vbo(&*engine, &group);
+                program.fill_vbo(&*engine, &group, program.sprite_size_bytes());
                 gl::DrawArrays(gl::TRIANGLES, 0, (group.len() * 6) as i32);
             }
         }

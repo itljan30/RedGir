@@ -515,6 +515,7 @@ pub struct ShaderProgram {
     uniforms: Vec<Uniform>,
     vao: VertexArray,
     vbo: VertexBuffer,
+    sprite_size_bytes: u32,
 }
 
 impl GetId for ShaderProgram {
@@ -592,8 +593,13 @@ impl ShaderProgram {
                 uniforms,
                 vao,
                 vbo,
+                sprite_size_bytes: bytes_per_sprite,
             })
         }
+    }
+
+    pub fn sprite_size_bytes(&self) -> u32 {
+        self.sprite_size_bytes
     }
 
     pub unsafe fn apply_uniforms(&self, engine: &Engine, sprite: &Sprite) {
@@ -602,8 +608,8 @@ impl ShaderProgram {
         }
     }
 
-    pub unsafe fn fill_vbo(&self, engine: &Engine, sprites: &Vec<&Sprite>) {
-        let mut buffer_data = Vec::new();
+    pub unsafe fn fill_vbo(&self, engine: &Engine, sprites: &Vec<&Sprite>, sprite_size: u32) {
+        let mut buffer_data = Vec::with_capacity(sprite_size as usize * sprites.len());
 
         for sprite in sprites {
             for attribute in self.attributes() {
@@ -618,7 +624,6 @@ impl ShaderProgram {
                 }
             }
         }
-
 
         self.vbo.bind();
         gl::BufferSubData(
