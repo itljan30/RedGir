@@ -575,6 +575,17 @@ impl ShaderProgram {
                 offset = vao.set_attribute(attribute, offset);
             }
 
+            let bytes_per_sprite = offset;
+            let sprite_capacity = 10_000;
+            vbo.bind();
+
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (sprite_capacity * bytes_per_sprite) as isize,
+                std::ptr::null(),
+                gl::DYNAMIC_DRAW,
+            );
+
             Ok(Self {
                 id,
                 attributes,
@@ -608,12 +619,13 @@ impl ShaderProgram {
             }
         }
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo.id);
-        gl::BufferData(
+
+        self.vbo.bind();
+        gl::BufferSubData(
             gl::ARRAY_BUFFER,
+            0,
             buffer_data.len() as isize,
             buffer_data.as_ptr() as *const _,
-            gl::DYNAMIC_DRAW,
         );
     }
 
