@@ -278,9 +278,8 @@ impl WindowManager {
                 program.apply();
                 program.apply_uniforms(&*engine, group[0]);
 
-                program.fill_vbo(&*engine, &group, program.sprite_size_bytes());
+                program.fill_vbo(&*engine, &group, program.bytes_per_sprite());
                 program.fill_ebo(group.len());
-
 
                 gl::DrawElements(gl::TRIANGLES, (group.len() * 6) as i32, gl::UNSIGNED_INT, std::ptr::null());
             }

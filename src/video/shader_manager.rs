@@ -554,7 +554,7 @@ impl VertexArray {
             gl::EnableVertexAttribArray(attribute.location);
             gl::VertexAttribPointer(
                 attribute.location,
-                len,
+                len * 4,
                 gl_type,
                 gl::FALSE,
                 0,
@@ -612,7 +612,7 @@ pub struct ShaderProgram {
     vao: VertexArray,
     vbo: VertexBuffer,
     ebo: VertexBuffer,
-    sprite_size_bytes: usize,
+    bytes_per_sprite: usize,
 }
 
 impl GetId for ShaderProgram {
@@ -663,12 +663,6 @@ impl ShaderProgram {
                 return Err(ShaderError::LinkingError(log));
             }
 
-            let vbo = VertexBuffer::new(gl::ARRAY_BUFFER);
-            vbo.bind();
-
-            let ebo = VertexBuffer::new(gl::ELEMENT_ARRAY_BUFFER);
-            ebo.bind();
-
             let mut offset: usize = 0;
             let vao = VertexArray::new();
             vao.bind();
@@ -678,7 +672,12 @@ impl ShaderProgram {
 
             let bytes_per_sprite = offset as usize;
             let sprite_capacity: usize = 10_000;
+
+            let vbo = VertexBuffer::new(gl::ARRAY_BUFFER);
             vbo.bind();
+
+            let ebo = VertexBuffer::new(gl::ELEMENT_ARRAY_BUFFER);
+            ebo.bind();
 
             gl::BufferData(
                 gl::ARRAY_BUFFER,
@@ -701,13 +700,13 @@ impl ShaderProgram {
                 vao,
                 vbo,
                 ebo,
-                sprite_size_bytes: bytes_per_sprite,
+                bytes_per_sprite,
             })
         }
     }
 
-    pub fn sprite_size_bytes(&self) -> usize {
-        self.sprite_size_bytes
+    pub fn bytes_per_sprite(&self) -> usize {
+        self.bytes_per_sprite
     }
 
     pub fn apply_uniforms(&self, engine: &Engine, sprite: &Sprite) {
@@ -771,7 +770,6 @@ impl ShaderProgram {
         unsafe {
             gl::UseProgram(self.id);
         }
-
         self.vao.bind();
         self.vbo.bind();
         self.ebo.bind();
