@@ -553,7 +553,7 @@ impl VertexArray {
 
     /// Sets the attribute to the vao.
     /// Returns the offset for next the attribute.
-    fn set_attribute(&self, attribute: &Attribute, offset: u32) -> u32 {
+    fn set_attribute(&self, attribute: &Attribute, offset: usize) -> usize {
         let (len, size, gl_type) = match attribute.data_type {
             AttributeDataType::Float     => (1, size_of::<f32>(), gl::FLOAT),
             AttributeDataType::FloatVec2 => (2, size_of::<f32>(), gl::FLOAT),
@@ -574,7 +574,7 @@ impl VertexArray {
                 offset as *const _,
             );
         }
-        (len as u32 * size as u32 * 6) + offset
+        (len as usize * size * 6) + offset
     }
 
     pub unsafe fn bind(&self) {
@@ -608,8 +608,10 @@ impl VertexBuffer {
         }
     }
 
-    pub unsafe fn bind(&self) {
-        gl::BindBuffer(self.target, self.id);
+    pub fn bind(&self) {
+        unsafe {
+            gl::BindBuffer(self.target, self.id);
+        }
     }
 }
 
@@ -620,7 +622,8 @@ pub struct ShaderProgram {
     uniforms: Vec<Uniform>,
     vao: VertexArray,
     vbo: VertexBuffer,
-    sprite_size_bytes: u32,
+    ebo: VertexBuffer,
+    sprite_size_bytes: usize,
 }
 
 impl GetId for ShaderProgram {
@@ -674,20 +677,30 @@ impl ShaderProgram {
             let vbo = VertexBuffer::new(gl::ARRAY_BUFFER);
             vbo.bind();
 
-            let mut offset = 0;
+            let ebo = VertexBuffer::new(gl::ELEMENT_ARRAY_BUFFER);
+            ebo.bind();
+
+            let mut offset: usize = 0;
             let vao = VertexArray::new();
             vao.bind();
             for attribute in attributes.iter() {
                 offset = vao.set_attribute(attribute, offset);
             }
 
-            let bytes_per_sprite = offset;
-            let sprite_capacity = 10_000;
+            let bytes_per_sprite = offset as usize;
+            let sprite_capacity: usize = 10_000;
             vbo.bind();
 
             gl::BufferData(
                 gl::ARRAY_BUFFER,
                 (sprite_capacity * bytes_per_sprite) as isize,
+                std::ptr::null(),
+                gl::DYNAMIC_DRAW,
+            );
+
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                (sprite_capacity * 6 * std::mem::size_of::<u32>()) as isize,
                 std::ptr::null(),
                 gl::DYNAMIC_DRAW,
             );
@@ -698,12 +711,13 @@ impl ShaderProgram {
                 uniforms,
                 vao,
                 vbo,
+                ebo,
                 sprite_size_bytes: bytes_per_sprite,
             })
         }
     }
 
-    pub fn sprite_size_bytes(&self) -> u32 {
+    pub fn sprite_size_bytes(&self) -> usize {
         self.sprite_size_bytes
     }
 
@@ -713,7 +727,32 @@ impl ShaderProgram {
         }
     }
 
-    pub unsafe fn fill_vbo(&self, engine: &Engine, sprites: &Vec<&Sprite>, sprite_size: u32) {
+    pub fn fill_ebo(&self, total_quads: usize) {
+        let mut indices: Vec<u32> = Vec::with_capacity((total_quads * 6) as usize);
+
+        for i in 0..total_quads {
+            let base: u32 = i as u32 * 4;
+            indices.push(base);
+            indices.push(base + 1);
+            indices.push(base + 2);
+
+            indices.push(base + 2);
+            indices.push(base + 1);
+            indices.push(base + 3);
+        }
+
+        self.ebo.bind();
+        unsafe {
+            gl::BufferSubData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                0,
+                (indices.len() * std::mem::size_of::<u32>()) as isize,
+                indices.as_ptr() as *const _,
+            )
+        }
+    }
+
+    pub fn fill_vbo(&self, engine: &Engine, sprites: &Vec<&Sprite>, sprite_size: usize) {
         let mut buffer = Vec::with_capacity(sprite_size as usize * sprites.len());
 
         for sprite in sprites {
@@ -722,15 +761,16 @@ impl ShaderProgram {
             }
         }
 
-        let buffer = Self::expand_quads_to_triangles(&buffer, (sprite_size / 4) as usize);
-
         self.vbo.bind();
-        gl::BufferSubData(
-            gl::ARRAY_BUFFER,
-            0,
-            buffer.len() as isize,
-            buffer.as_ptr() as *const _,
-        );
+
+        unsafe {
+            gl::BufferSubData(
+                gl::ARRAY_BUFFER,
+                0,
+                buffer.len() as isize,
+                buffer.as_ptr() as *const _,
+            );
+        }
     }
 
     pub fn attributes(&self) -> &Vec<Attribute> {
@@ -747,29 +787,29 @@ impl ShaderProgram {
         self.vbo.bind();
     }
 
-    /// [[bottom_left], [bottom_right], [top_left], [top_right]]
-    fn expand_quads_to_triangles(buffer: &Vec<u8>, vertex_stride: usize) -> Vec<u8> {
-        let total_quads = buffer.len() / (vertex_stride * 4);
-        let mut result: Vec<u8> = Vec::with_capacity(total_quads * 6 * vertex_stride);
-
-        for i in 0..total_quads {
-            let base = i * 4 * vertex_stride;
-            let vert_1 = &buffer[base + 0 * vertex_stride .. base + 1 * vertex_stride];
-            let vert_2 = &buffer[base + 1 * vertex_stride .. base + 2 * vertex_stride];
-            let vert_3 = &buffer[base + 2 * vertex_stride .. base + 3 * vertex_stride];
-            let vert_4 = &buffer[base + 3 * vertex_stride .. base + 4 * vertex_stride];
-
-            result.extend_from_slice(vert_1);
-            result.extend_from_slice(vert_2);
-            result.extend_from_slice(vert_3);
-
-            result.extend_from_slice(vert_3);
-            result.extend_from_slice(vert_2);
-            result.extend_from_slice(vert_4);
-        }
-
-        result
-    }
+    // /// [[bottom_left], [bottom_right], [top_left], [top_right]]
+    // fn expand_quads_to_triangles(buffer: &Vec<u8>, vertex_stride: usize) -> Vec<u8> {
+    //     let total_quads = buffer.len() / (vertex_stride * 4);
+    //     let mut result: Vec<u8> = Vec::with_capacity(total_quads * 6 * vertex_stride);
+    //
+    //     for i in 0..total_quads {
+    //         let base = i * 4 * vertex_stride;
+    //         let vert_1 = &buffer[base + 0 * vertex_stride .. base + 1 * vertex_stride];
+    //         let vert_2 = &buffer[base + 1 * vertex_stride .. base + 2 * vertex_stride];
+    //         let vert_3 = &buffer[base + 2 * vertex_stride .. base + 3 * vertex_stride];
+    //         let vert_4 = &buffer[base + 3 * vertex_stride .. base + 4 * vertex_stride];
+    //
+    //         result.extend_from_slice(vert_1);
+    //         result.extend_from_slice(vert_2);
+    //         result.extend_from_slice(vert_3);
+    //
+    //         result.extend_from_slice(vert_3);
+    //         result.extend_from_slice(vert_2);
+    //         result.extend_from_slice(vert_4);
+    //     }
+    //
+    //     result
+    // }
 }
 
 fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLuint, ShaderError> {
