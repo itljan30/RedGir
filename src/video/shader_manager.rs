@@ -131,19 +131,6 @@ impl FragmentShader {
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
-/// Attributes require data per vertex instead of per sprite.
-/// Therefore, a vec2 is really 4 vec2s, one per vertex
-/// Vertices should be returned in this order:
-/// [[bottom_left], [bottom_right], [top_left], [top_right]]
-// pub enum AttributeData {
-//     Float       (fn(&Engine, &Sprite) -> [f32; 4]),
-//     FloatVec2   (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
-//     FloatVec3   (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
-//     FloatVec4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
-//     Int         (fn(&Engine, &Sprite) -> [i32; 4]),
-//     Bool        (fn(&Engine, &Sprite) -> [bool; 4]),
-//     UInt        (fn(&Engine, &Sprite) -> [u32; 4]),
-// }
 pub enum AttributeDataType {
     Float,
     FloatVec2,
@@ -152,10 +139,6 @@ pub enum AttributeDataType {
     Int,
     Bool,
     UInt,
-}
-
-impl AttributeDataType {
-
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
@@ -181,6 +164,8 @@ pub enum UniformDataType {
     Sampler2D,
 }
 
+// FIXME implement own PartialEq function instead of just ignoring warning
+#[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Uniform {
     name: String,
@@ -197,11 +182,11 @@ impl Uniform {
         }
     }
 
-    pub fn push_data_to_result<T: Copy>(buffer: &mut Vec<u8>, data: &[T]) {
+    pub fn push_data_to_result<T: Copy>(result: &mut Vec<u8>, data: &[T]) {
         let ptr = data.as_ptr() as *const u8;
         let size = data.len() * std::mem::size_of::<T>();
         unsafe {
-            buffer.extend_from_slice(std::slice::from_raw_parts(ptr, size));
+            result.extend_from_slice(std::slice::from_raw_parts(ptr, size));
         }
     }
 
@@ -425,7 +410,9 @@ impl Uniform {
         }
     }
 }
-
+ 
+// FIXME implement own PartialEq function instead of just ignoring warning
+#[allow(unpredictable_function_pointer_comparisons)]
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Attribute {
     name: String,
@@ -444,11 +431,11 @@ impl Attribute {
         }
     }
 
-    pub fn write_to_buffer(&self, engine: &Engine, sprite: &Sprite, callback: &mut Vec<u8>) {
-        (self.callback)(engine, sprite, callback);
+    fn write_to_buffer(&self, engine: &Engine, sprite: &Sprite, buffer: &mut Vec<u8>) {
+        (self.callback)(engine, sprite, buffer);
     }
 
-    pub fn push_data_to_buffer<T: Copy>(buffer: &mut Vec<u8>, data: &[T]) {
+    pub fn write_data_to_buffer<T: Copy>(buffer: &mut Vec<u8>, data: &[T]) {
         let ptr = data.as_ptr() as *const u8;
         let size = data.len() * std::mem::size_of::<T>();
         unsafe {
@@ -456,7 +443,7 @@ impl Attribute {
         }
     }
 
-    /// A preset Attribute that returns a [[f32; 2]; 4], or (x, y) position for each vertex in NDC.
+    /// A preset Attribute that gets the position for each vertex of a sprite in NDC.
     pub fn position(name: String, location: u32) -> Self {
         Self::new(
             name,
@@ -489,13 +476,15 @@ impl Attribute {
                         2.0 * (top_right.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
                     ],
                 ];
-                Attribute::push_data_to_buffer(buffer, &data);
+                for d in data {
+                    Attribute::write_data_to_buffer(buffer, &d);
+                }
             },
             AttributeDataType::FloatVec2,
         )
     }
 
-    /// A preset Attribute that returns a [[f32; 2]; 4], or (u, v) texture position for each vertex.
+    /// A preset Attribute that returns the (u, v) texture position for each vertex of a sprite.
     pub fn texture_uv_from_sprite_sheet(name: String, location: u32) -> Self {
         Self::new(
             name,
@@ -510,7 +499,9 @@ impl Attribute {
                     [u_min, v_max],
                     [u_max, v_max],
                 ];
-                Attribute::push_data_to_buffer(buffer, &data);
+                for d in data {
+                    Attribute::write_data_to_buffer(buffer, &d);
+                }
             },
             AttributeDataType::FloatVec2,
         )
@@ -574,11 +565,13 @@ impl VertexArray {
                 offset as *const _,
             );
         }
-        (len as usize * size * 6) + offset
+        (len as usize * size * 4) + offset
     }
 
-    pub unsafe fn bind(&self) {
-        gl::BindVertexArray(self.id);
+    pub fn bind(&self) {
+        unsafe {
+            gl::BindVertexArray(self.id);
+        }
     }
 }
 
@@ -721,16 +714,16 @@ impl ShaderProgram {
         self.sprite_size_bytes
     }
 
-    pub unsafe fn apply_uniforms(&self, engine: &Engine, sprite: &Sprite) {
+    pub fn apply_uniforms(&self, engine: &Engine, sprite: &Sprite) {
         for uniform in self.uniforms() {
             uniform.bind(self.id, engine, sprite)
         }
     }
 
-    pub fn fill_ebo(&self, total_quads: usize) {
-        let mut indices: Vec<u32> = Vec::with_capacity((total_quads * 6) as usize);
+    pub fn fill_ebo(&self, total_sprites: usize) {
+        let mut indices: Vec<u32> = Vec::with_capacity(total_sprites * 6);
 
-        for i in 0..total_quads {
+        for i in 0..total_sprites {
             let base: u32 = i as u32 * 4;
             indices.push(base);
             indices.push(base + 1);
@@ -741,7 +734,6 @@ impl ShaderProgram {
             indices.push(base + 3);
         }
 
-        self.ebo.bind();
         unsafe {
             gl::BufferSubData(
                 gl::ELEMENT_ARRAY_BUFFER,
@@ -761,8 +753,6 @@ impl ShaderProgram {
             }
         }
 
-        self.vbo.bind();
-
         unsafe {
             gl::BufferSubData(
                 gl::ARRAY_BUFFER,
@@ -781,35 +771,15 @@ impl ShaderProgram {
         &self.uniforms
     }
 
-    pub unsafe fn apply(&self) {
-        gl::UseProgram(self.id);
+    pub fn apply(&self) {
+        unsafe {
+            gl::UseProgram(self.id);
+        }
+
         self.vao.bind();
         self.vbo.bind();
+        self.ebo.bind();
     }
-
-    // /// [[bottom_left], [bottom_right], [top_left], [top_right]]
-    // fn expand_quads_to_triangles(buffer: &Vec<u8>, vertex_stride: usize) -> Vec<u8> {
-    //     let total_quads = buffer.len() / (vertex_stride * 4);
-    //     let mut result: Vec<u8> = Vec::with_capacity(total_quads * 6 * vertex_stride);
-    //
-    //     for i in 0..total_quads {
-    //         let base = i * 4 * vertex_stride;
-    //         let vert_1 = &buffer[base + 0 * vertex_stride .. base + 1 * vertex_stride];
-    //         let vert_2 = &buffer[base + 1 * vertex_stride .. base + 2 * vertex_stride];
-    //         let vert_3 = &buffer[base + 2 * vertex_stride .. base + 3 * vertex_stride];
-    //         let vert_4 = &buffer[base + 3 * vertex_stride .. base + 4 * vertex_stride];
-    //
-    //         result.extend_from_slice(vert_1);
-    //         result.extend_from_slice(vert_2);
-    //         result.extend_from_slice(vert_3);
-    //
-    //         result.extend_from_slice(vert_3);
-    //         result.extend_from_slice(vert_2);
-    //         result.extend_from_slice(vert_4);
-    //     }
-    //
-    //     result
-    // }
 }
 
 fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLuint, ShaderError> {

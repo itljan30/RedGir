@@ -95,7 +95,7 @@ impl SpriteSheet {
     }
 
     pub fn from_color(color: Color) -> Result<Self, SpriteSheetError> {
-        let pixel_data = vec![color.r, color.b, color.g, color.a];
+        let pixel_data = vec![color.r, color.g, color.b, color.a];
         let texture_id = get_texture_id(1, 1, pixel_data)?;
 
         Ok(SpriteSheet {
