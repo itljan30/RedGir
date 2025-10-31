@@ -135,69 +135,94 @@ impl FragmentShader {
 /// Therefore, a vec2 is really 4 vec2s, one per vertex
 /// Vertices should be returned in this order:
 /// [[bottom_left], [bottom_right], [top_left], [top_right]]
-pub enum AttributeData {
-    Float       (fn(&Engine, &Sprite) -> [f32; 4]),
-    FloatVec2   (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
-    FloatVec3   (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
-    FloatVec4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
-    Int         (fn(&Engine, &Sprite) -> [i32; 4]),
-    Bool        (fn(&Engine, &Sprite) -> [bool; 4]),
-    UInt        (fn(&Engine, &Sprite) -> [u32; 4]),
+// pub enum AttributeData {
+//     Float       (fn(&Engine, &Sprite) -> [f32; 4]),
+//     FloatVec2   (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
+//     FloatVec3   (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
+//     FloatVec4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
+//     Int         (fn(&Engine, &Sprite) -> [i32; 4]),
+//     Bool        (fn(&Engine, &Sprite) -> [bool; 4]),
+//     UInt        (fn(&Engine, &Sprite) -> [u32; 4]),
+// }
+pub enum AttributeDataType {
+    Float,
+    FloatVec2,
+    FloatVec3,
+    FloatVec4,
+    Int,
+    Bool,
+    UInt,
+}
+
+impl AttributeDataType {
+
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
-pub enum UniformData {
-    Float       (fn(&Engine, &Sprite) -> f32),
-    FloatVec2   (fn(&Engine, &Sprite) -> [f32; 2]),
-    FloatVec3   (fn(&Engine, &Sprite) -> [f32; 3]),
-    FloatVec4   (fn(&Engine, &Sprite) -> [f32; 4]),
-    FloatMat2   (fn(&Engine, &Sprite) -> [[f32; 2]; 2]),
-    FloatMat3   (fn(&Engine, &Sprite) -> [[f32; 3]; 3]),
-    FloatMat4   (fn(&Engine, &Sprite) -> [[f32; 4]; 4]),
-    FloatMat2x3 (fn(&Engine, &Sprite) -> [[f32; 3]; 2]),
-    FloatMat2x4 (fn(&Engine, &Sprite) -> [[f32; 4]; 2]),
-    FloatMat3x2 (fn(&Engine, &Sprite) -> [[f32; 2]; 3]),
-    FloatMat3x4 (fn(&Engine, &Sprite) -> [[f32; 4]; 3]),
-    FloatMat4x2 (fn(&Engine, &Sprite) -> [[f32; 2]; 4]),
-    FloatMat4x3 (fn(&Engine, &Sprite) -> [[f32; 3]; 4]),
-    Int         (fn(&Engine, &Sprite) -> i32),
-    Bool        (fn(&Engine, &Sprite) -> bool),
-    UInt        (fn(&Engine, &Sprite) -> u32),
+pub enum UniformDataType {
+    Float,
+    FloatVec2,
+    FloatVec3,
+    FloatVec4,
+    FloatMat2,
+    FloatMat3,
+    FloatMat4,
+    FloatMat2x3,
+    FloatMat2x4,
+    FloatMat3x2,
+    FloatMat3x4,
+    FloatMat4x2,
+    FloatMat4x3,
+    Int,
+    Bool,
+    UInt,
     // TODO add a TextureId wrapper or something, u32 is OpenGL texture id
     /// NOTE u32 is OpenGL texture id
-    Sampler2D   (fn(&Engine, &Sprite) -> u32),
+    Sampler2D,
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct Uniform {
     name: String,
-    data: UniformData,
+    callback: fn(&Engine, &Sprite, &mut Vec<u8>),
+    data_type: UniformDataType,
 }
 
 impl Uniform {
-    pub fn new(name: String, data: UniformData) -> Self {
+    pub fn new(name: String, callback: fn(&Engine, &Sprite, &mut Vec<u8>), data_type: UniformDataType) -> Self {
         Self {
             name,
-            data,
+            callback,
+            data_type,
+        }
+    }
+
+    pub fn push_data_to_result<T: Copy>(buffer: &mut Vec<u8>, data: &[T]) {
+        let ptr = data.as_ptr() as *const u8;
+        let size = data.len() * std::mem::size_of::<T>();
+        unsafe {
+            buffer.extend_from_slice(std::slice::from_raw_parts(ptr, size));
         }
     }
 
     pub fn time_since_initialization(name: String) -> Self {
         Self {
             name,
-            data: UniformData::Float(|engine: &Engine, _sprite: &Sprite| {
-                engine.time_since_initialization_seconds()
-            })
+            callback: |engine: &Engine, _sprite: &Sprite, buffer: &mut Vec<u8>| {
+                Uniform::push_data_to_result(buffer, &[engine.time_since_initialization_seconds()]);
+            },
+            data_type: UniformDataType::Float
         }
     }
 
     pub fn aspect_ratio(name: String) -> Self {
         Self {
             name, 
-            data: UniformData::Float(|engine: &Engine, _sprite: &Sprite| {
+            callback: |engine: &Engine, _sprite: &Sprite, buffer: &mut Vec<u8>| {
                 let (width, height) = engine.get_window_dimensions();
-                width as f32 / height as f32
-            })
+                Uniform::push_data_to_result(buffer, &[width as f32 / height as f32]);
+            },
+            data_type: UniformDataType::Float,
         }
     }
 
@@ -205,27 +230,30 @@ impl Uniform {
     pub fn sprite_center(name: String) -> Self {
         Self {
             name,
-            data: UniformData::FloatVec2(|engine: &Engine, sprite: &Sprite| {
+            callback: |engine: &Engine, sprite: &Sprite, buffer: &mut Vec<u8>| {
                 let (w_width, w_height) = engine.get_window_dimensions();
                 let (s_width, s_height) = (sprite.get_width(), sprite.get_height());
                 let (x, y) = sprite.get_position();
                 let aspect_ratio = w_width as f32 / w_height as f32;
 
-                [
+                let data = [
                     2.0 * (x as f32 + (s_width as f32 / 2.0)) / w_width as f32 - 1.0,
                     2.0 * ((y as f32 + (s_height as f32 / 2.0)) / aspect_ratio) / w_height as f32 - 1.0
-                ]
-            }
-        )}
+                ];
+                Uniform::push_data_to_result(buffer, &data);
+            },
+            data_type: UniformDataType::FloatVec2,
+        }
     }
 
     /// A preset Uniform that returns a float representing the rotation of the sprite in radians.
     pub fn rotation(name: String) -> Self {
         Self {
             name,
-            data: UniformData::Float(|_engine: &Engine, sprite: &Sprite| {
-                sprite.get_rotation()
-            }),
+            callback: |_engine: &Engine, sprite: &Sprite, buffer: &mut Vec<u8>| {
+                Uniform::push_data_to_result(buffer, &[sprite.get_rotation()]);
+            },
+            data_type: UniformDataType::Float,
         }
     }
 
@@ -234,15 +262,17 @@ impl Uniform {
     pub fn flip(name: String) -> Self {
         Self {
             name,
-            data: UniformData::FloatVec2(|_engine: &Engine, sprite: &Sprite| {
+            callback: |_engine: &Engine, sprite: &Sprite, result: &mut Vec<u8>| {
                 let flip = sprite.get_flip();
-                match flip {
+                let data = match flip {
                     Flip::None   => [0.0, 0.0],
                     Flip::FlipX  => [1.0, 0.0],
                     Flip::FlipY  => [0.0, 1.0],
                     Flip::FlipXY => [1.0, 1.0],
-                }
-            }),
+                };
+                Uniform::push_data_to_result(result, &data);
+            },
+            data_type: UniformDataType::FloatVec2,
         }
     }
 
@@ -250,87 +280,148 @@ impl Uniform {
         let location;
         unsafe {
             location = gl::GetUniformLocation(shader_id, self.name.as_ptr() as *const i8);
-            match self.data {
-                UniformData::Float(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform1f(location, data);
-                }
-                UniformData::FloatVec2(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform2f(location, data[0], data[1]);
-                },
-                UniformData::FloatVec3(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform3f(location, data[0], data[1], data[2])
-                },
-                UniformData::FloatVec4(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform4f(location, data[0], data[1], data[2], data[3])
-                },
-                UniformData::FloatMat2(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix2fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat3(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix3fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat4(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix4fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat2x3(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix2x3fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat2x4(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix2x4fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat3x2(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix3x2fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat3x4(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix3x4fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat4x2(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix4x2fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::FloatMat4x3(func) => {
-                    let data = func(engine, sprite);
-                    gl::UniformMatrix4x3fv(location, 1, gl::FALSE, data.as_ptr() as *const f32)
-                },
-                UniformData::Int(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform1i(location, data);
-                },
-                UniformData::Bool(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform1i(location, data as GLint);
-                },
-                UniformData::UInt(func) => {
-                    let data = func(engine, sprite);
-                    gl::Uniform1ui(location, data);
-                },
-                UniformData::Sampler2D(func) => {
-                    let texture_id = func(engine, sprite);
-                    gl::ActiveTexture(gl::TEXTURE0);
-                    gl::BindTexture(gl::TEXTURE_2D, texture_id);
-                },
-            };
         }
+        match self.data_type {
+            UniformDataType::Float => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<f32>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let value = *(buffer.as_ptr() as *const f32);
+                    gl::Uniform1f(location, value);
+                }
+            }
+            UniformDataType::FloatVec2 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 2]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let value = *(buffer.as_ptr() as *const [f32; 2]);
+                    gl::Uniform2f(location, value[0], value[1]);
+                }
+            },
+            UniformDataType::FloatVec3 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 3]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let value = *(buffer.as_ptr() as *const [f32; 3]);
+                    gl::Uniform3f(location, value[0], value[1], value[2]);
+                }
+            }
+            UniformDataType::FloatVec4 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 4]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let value = *(buffer.as_ptr() as *const [f32; 4]);
+                    gl::Uniform4f(location, value[0], value[1], value[2], value[3]);
+                }
+            }
+            UniformDataType::FloatMat2 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 4]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix2fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat3 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 9]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix3fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat4 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 16]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix4fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat2x3 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 6]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix2x3fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat2x4 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 8]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix2x4fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat3x2 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 6]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix3x2fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat3x4 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 12]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix3x4fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat4x2 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 8]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix4x2fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::FloatMat4x3 => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<[f32; 12]>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    gl::UniformMatrix4x3fv(location, 1, gl::FALSE, buffer.as_ptr() as *const f32);
+                }
+            }
+            UniformDataType::Int => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<i32>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let value = *(buffer.as_ptr() as *const i32);
+                    gl::Uniform1i(location, value);
+                }
+            }
+            UniformDataType::Bool => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<bool>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let value = *(buffer.as_ptr() as *const bool);
+                    gl::Uniform1i(location, value as GLint);
+                }
+            }
+            UniformDataType::UInt => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<u32>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let value = *(buffer.as_ptr() as *const u32);
+                    gl::Uniform1ui(location, value);
+                }
+            }
+            UniformDataType::Sampler2D => {
+                let mut buffer: Vec<u8> = Vec::with_capacity(std::mem::size_of::<GLuint>());
+                (self.callback)(engine, sprite, &mut buffer);
+                unsafe {
+                    let tex = *(buffer.as_ptr() as *const GLuint);
+                    gl::ActiveTexture(gl::TEXTURE0);
+                    gl::BindTexture(gl::TEXTURE_2D, tex);
+                }
+            }
+        };
     }
 
     pub fn texture_from_sprite_sheet(name: String) -> Self {
         Self {
             name,
-            data: UniformData::Sampler2D(|engine: &Engine, sprite: &Sprite| {
+            callback: |engine: &Engine, sprite: &Sprite, result: &mut Vec<u8>| {
                 let sprite_sheet_id = sprite.get_sprite_sheet();
-                engine.get_texture_from_sprite_sheet(sprite_sheet_id).unwrap()
-            }),
+                let data = engine.get_texture_from_sprite_sheet(sprite_sheet_id).unwrap();
+                Uniform::push_data_to_result(result, &[data]);
+            },
+            data_type: UniformDataType::Sampler2D,
         }
     }
 }
@@ -339,20 +430,30 @@ impl Uniform {
 pub struct Attribute {
     name: String,
     location: u32,
-    data: AttributeData,
+    callback: fn(&Engine, &Sprite, &mut Vec<u8>),
+    data_type: AttributeDataType,
 }
 
 impl Attribute {
-    pub fn new(name: String, location: u32, data: AttributeData) -> Self {
+    pub fn new(name: String, location: u32, callback: fn(&Engine, &Sprite, &mut Vec<u8>), data_type: AttributeDataType) -> Self {
         Self {
             name,
             location,
-            data,
+            callback,
+            data_type,
         }
     }
 
-    pub fn get_data(&self) -> &AttributeData {
-        &self.data
+    pub fn write_to_buffer(&self, engine: &Engine, sprite: &Sprite, callback: &mut Vec<u8>) {
+        (self.callback)(engine, sprite, callback);
+    }
+
+    pub fn push_data_to_buffer<T: Copy>(buffer: &mut Vec<u8>, data: &[T]) {
+        let ptr = data.as_ptr() as *const u8;
+        let size = data.len() * std::mem::size_of::<T>();
+        unsafe {
+            buffer.extend_from_slice(std::slice::from_raw_parts(ptr, size));
+        }
     }
 
     /// A preset Attribute that returns a [[f32; 2]; 4], or (x, y) position for each vertex in NDC.
@@ -360,7 +461,7 @@ impl Attribute {
         Self::new(
             name,
             location,
-            AttributeData::FloatVec2(|engine: &Engine, sprite: &Sprite| {
+            |engine: &Engine, sprite: &Sprite, buffer: &mut Vec<u8>| {
                 let (w_width, w_height) = engine.get_window_dimensions();
                 let (s_width, s_height) = (sprite.get_width(), sprite.get_height());
                 let pos = sprite.get_position();
@@ -370,7 +471,7 @@ impl Attribute {
                 let top_right = (pos.0 + s_width as i32, pos.1 + s_height as i32);
                 let aspect_ratio = w_width as f32 / w_height as f32;
 
-                [
+                let data = [
                     [
                         2.0 * bottom_left.0 as f32 / w_width as f32 - 1.0,
                         2.0 * (bottom_left.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
@@ -387,8 +488,10 @@ impl Attribute {
                         2.0 * top_right.0 as f32 / w_width as f32 - 1.0,
                         2.0 * (top_right.1 as f32 / aspect_ratio) / w_height as f32 - 1.0
                     ],
-                ]
-            }),
+                ];
+                Attribute::push_data_to_buffer(buffer, &data);
+            },
+            AttributeDataType::FloatVec2,
         )
     }
 
@@ -397,17 +500,19 @@ impl Attribute {
         Self::new(
             name,
             location,
-            AttributeData::FloatVec2(|engine: &Engine, sprite: &Sprite| {
+            |engine: &Engine, sprite: &Sprite, buffer: &mut Vec<u8>| {
                 let sprite_sheet = sprite.get_sprite_sheet();
                 let index = sprite.get_sprite_sheet_index();
                 let (u_min, v_min, u_max, v_max) = engine.get_uv_from_sprite_sheet(sprite_sheet, index).unwrap();
-                [
+                let data = [
                     [u_min, v_min],
                     [u_max, v_min],
                     [u_min, v_max],
                     [u_max, v_max],
-                ]
-            }),
+                ];
+                Attribute::push_data_to_buffer(buffer, &data);
+            },
+            AttributeDataType::FloatVec2,
         )
     }
 }
@@ -449,14 +554,14 @@ impl VertexArray {
     /// Sets the attribute to the vao.
     /// Returns the offset for next the attribute.
     fn set_attribute(&self, attribute: &Attribute, offset: u32) -> u32 {
-        let (len, size, gl_type) = match attribute.data {
-            AttributeData::Float(_)     => (1, size_of::<f32>(), gl::FLOAT),
-            AttributeData::FloatVec2(_) => (2, size_of::<f32>(), gl::FLOAT),
-            AttributeData::FloatVec3(_) => (3, size_of::<f32>(), gl::FLOAT),
-            AttributeData::FloatVec4(_) => (4, size_of::<f32>(), gl::FLOAT),
-            AttributeData::Int(_)       => (1, size_of::<i32>(), gl::INT),
-            AttributeData::Bool(_)      => (1, size_of::<bool>(), gl::UNSIGNED_BYTE),
-            AttributeData::UInt(_)      => (1, size_of::<u32>(), gl::UNSIGNED_INT),
+        let (len, size, gl_type) = match attribute.data_type {
+            AttributeDataType::Float     => (1, size_of::<f32>(), gl::FLOAT),
+            AttributeDataType::FloatVec2 => (2, size_of::<f32>(), gl::FLOAT),
+            AttributeDataType::FloatVec3 => (3, size_of::<f32>(), gl::FLOAT),
+            AttributeDataType::FloatVec4 => (4, size_of::<f32>(), gl::FLOAT),
+            AttributeDataType::Int       => (1, size_of::<i32>(), gl::INT),
+            AttributeDataType::Bool      => (1, size_of::<bool>(), gl::UNSIGNED_BYTE),
+            AttributeDataType::UInt      => (1, size_of::<u32>(), gl::UNSIGNED_INT),
         };
         unsafe {
             gl::EnableVertexAttribArray(attribute.location);
@@ -609,28 +714,22 @@ impl ShaderProgram {
     }
 
     pub unsafe fn fill_vbo(&self, engine: &Engine, sprites: &Vec<&Sprite>, sprite_size: u32) {
-        let mut buffer_data = Vec::with_capacity(sprite_size as usize * sprites.len());
+        let mut buffer = Vec::with_capacity(sprite_size as usize * sprites.len());
 
         for sprite in sprites {
             for attribute in self.attributes() {
-                match attribute.get_data(){ // Call the function to get the data
-                    AttributeData::Float(func)     => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                    AttributeData::FloatVec2(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                    AttributeData::FloatVec3(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                    AttributeData::FloatVec4(func) => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                    AttributeData::Int(func)       => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                    AttributeData::Bool(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                    AttributeData::UInt(func)      => push_callback_result_as_slice(&mut buffer_data, &func(engine, sprite)),
-                }
+                attribute.write_to_buffer(engine, sprite, &mut buffer);
             }
         }
+
+        let buffer = Self::expand_quads_to_triangles(&buffer, (sprite_size / 4) as usize);
 
         self.vbo.bind();
         gl::BufferSubData(
             gl::ARRAY_BUFFER,
             0,
-            buffer_data.len() as isize,
-            buffer_data.as_ptr() as *const _,
+            buffer.len() as isize,
+            buffer.as_ptr() as *const _,
         );
     }
 
@@ -646,6 +745,30 @@ impl ShaderProgram {
         gl::UseProgram(self.id);
         self.vao.bind();
         self.vbo.bind();
+    }
+
+    /// [[bottom_left], [bottom_right], [top_left], [top_right]]
+    fn expand_quads_to_triangles(buffer: &Vec<u8>, vertex_stride: usize) -> Vec<u8> {
+        let total_quads = buffer.len() / (vertex_stride * 4);
+        let mut result: Vec<u8> = Vec::with_capacity(total_quads * 6 * vertex_stride);
+
+        for i in 0..total_quads {
+            let base = i * 4 * vertex_stride;
+            let vert_1 = &buffer[base + 0 * vertex_stride .. base + 1 * vertex_stride];
+            let vert_2 = &buffer[base + 1 * vertex_stride .. base + 2 * vertex_stride];
+            let vert_3 = &buffer[base + 2 * vertex_stride .. base + 3 * vertex_stride];
+            let vert_4 = &buffer[base + 3 * vertex_stride .. base + 4 * vertex_stride];
+
+            result.extend_from_slice(vert_1);
+            result.extend_from_slice(vert_2);
+            result.extend_from_slice(vert_3);
+
+            result.extend_from_slice(vert_3);
+            result.extend_from_slice(vert_2);
+            result.extend_from_slice(vert_4);
+        }
+
+        result
     }
 }
 
@@ -683,15 +806,3 @@ fn generate_and_compile_shader(source: &str, shader_type: GLenum) -> Result<GLui
     Ok(shader_id)
 }
 
-/// [[bottom_left], [bottom_right], [top_left], [top_right]]
-unsafe fn push_callback_result_as_slice<T: Sized + Copy>(buffer: &mut Vec<u8>, data: &[T]) {
-    let new_data = [
-        data[0], data[1], data[2],
-        data[1], data[2], data[3],
-    ];
-    let byte_slice = std::slice::from_raw_parts(
-        new_data.as_ptr() as *const u8,
-        new_data.len() * std::mem::size_of::<T>()
-    );
-    buffer.extend_from_slice(byte_slice);
-}
