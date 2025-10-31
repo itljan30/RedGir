@@ -89,6 +89,7 @@ impl EngineBuilder {
     }
 }
 
+#[allow(dead_code)]
 pub struct Engine {
     // NOTE window is first so that all openGL things get dropped before the glfw context
     window: WindowManager,
